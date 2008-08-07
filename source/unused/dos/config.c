@@ -120,7 +120,6 @@ void set_config_default()
   /* controllers options */
   config.sys_type[0] = 0;
   config.sys_type[1] = 0;
-  config.crosshair = 1;
 }
 
 void print_options(void)

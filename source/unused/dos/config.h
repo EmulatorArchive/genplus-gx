@@ -70,7 +70,6 @@ typedef struct
   uint8 overscan;
   uint8 render;
   uint8 sys_type[2];
-  uint8 crosshair;
 } t_config;
 
 /* Global variables */

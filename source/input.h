@@ -59,9 +59,8 @@
 #define NO_SYSTEM           (0) /* Unconnected Port*/
 #define SYSTEM_GAMEPAD      (1) /* Single Gamepad */
 #define SYSTEM_MENACER      (2)	/* Sega Lightgun */
-#define SYSTEM_JUSTIFIER    (3)	/* Konami Lightgun */
-#define SYSTEM_TEAMPLAYER   (4)	/* Sega TeamPlayer */
-#define SYSTEM_WAYPLAY      (5)	/* EA 4-Way Play (use both ports) */
+#define SYSTEM_TEAMPLAYER   (3)	/* Sega TeamPlayer */
+#define SYSTEM_WAYPLAY      (4)	/* EA 4-Way Play (use both ports) */
 
 /* Players Inputs */
 #define PLAYER_1A   (0)
@@ -81,9 +80,7 @@ typedef struct
   uint8   system[2];            /* Can be any of the SYSTEM_* bitmasks */
   uint8   max;                  /* maximum number of connected devices */
   uint8   current;              /* current PAD number (4WAYPLAY) */
-  int     analog[2][2];         /* analog device */
-  int     x_offset;
-  int     y_offset;
+  int     analog[2];            /* analog device */
 } t_input;
 
 /* Global variables */
@@ -93,10 +90,9 @@ extern t_input input;
 extern void input_reset (void);
 extern void input_update(void);
 extern void input_raz(void);
-
-/* Peripherals specific */
-extern unsigned int menacer_read (void);
-extern unsigned int justifier_read (void);
+extern void lightgun_set (int num);
+extern unsigned int lightgun_1_read (void);
+extern unsigned int lightgun_2_read (void);
 extern unsigned int gamepad_1_read (void);
 extern unsigned int gamepad_2_read (void);
 extern void gamepad_1_write (unsigned int data);

@@ -29,11 +29,6 @@ uint8 m68k_readmap_16[32];
 uint8 m68k_writemap_8[32];
 uint8 m68k_writemap_16[32];
 
-
-uint8 pico_current;
-static uint8 pico_page[7] = {0x00,0x01,0x03,0x07,0x0F,0x1F,0x3F};
-
-
 static inline unsigned int m68k_read_bus_8(unsigned int address)
 {
 #ifdef LOGERROR
@@ -284,7 +279,7 @@ unsigned int m68k_read_memory_8(unsigned int address)
 			return READ_BYTE(rom_readmap[offset], address & 0x7ffff);
 
 		case EEPROM:
-			if (address == eeprom.type.sda_out_adr) return eeprom_read(address, 0);
+      		if (address == eeprom.type.sda_out_adr) return eeprom_read(address);
 			return READ_BYTE(rom_readmap[offset], address & 0x7ffff);
 
 		case CART_HW:
@@ -320,19 +315,19 @@ unsigned int m68k_read_memory_8(unsigned int address)
         }
 
         case 0x05:  /* MSB PEN X coordinate */
-          return (input.analog[0][0] >> 8);
+          return (input.analog[0] >> 8);
 
         case 0x07:  /* LSB PEN X coordinate */
-          return (input.analog[0][0] & 0xff);
+          return (input.analog[0] & 0xff);
 
         case 0x09:  /* MSB PEN Y coordinate */
-          return (input.analog[0][1] >> 8);
+          return (input.analog[1] >> 8);
 
         case 0x0b:  /* LSB PEN Y coordinate */
-          return (input.analog[0][1] & 0xff);
+          return (input.analog[1] & 0xff);
 
         case 0x0d:  /* PAGE register */
-          return pico_page[pico_current]; /* TODO */
+          return 0x00; /* TODO */
 
         case 0x10:  /* PCM registers */
         case 0x11:
@@ -421,28 +416,27 @@ unsigned int m68k_read_memory_16 (unsigned int address)
 	    			int temp = io_read((address >> 1) & 0x0f);
 	      		return (temp << 8 | temp);
 					}
-
 					case 0x11:	/* BUSACK */
 						return ((m68k_read_bus_16(address) & 0xfeff) | (zbusack << 8));
 
 					case 0x50:	/* SVP */
-						if (svp)
-            {
-              switch (address & 0xff)
-              {
-                case 0:
-                case 2:
-                  return svp->ssp1601.gr[SSP_XST].h;
+						if (!svp) return m68k_read_bus_16(address);
+						switch (address & 0xff)
+						{
+							case 0:
+							case 2:
+								return svp->ssp1601.gr[SSP_XST].h;
 
-                case 4:
-                {
-                  unsigned int temp = svp->ssp1601.gr[SSP_PM0].h;
-                  svp->ssp1601.gr[SSP_PM0].h &= ~1;
-                  return temp;
-                }
-              }
+							case 4:
+							{
+								unsigned int temp = svp->ssp1601.gr[SSP_PM0].h;
+								svp->ssp1601.gr[SSP_PM0].h &= ~1;
+								return temp;
+							}
+
+							default:
+								return m68k_read_bus_16(address);
 						}
-            return m68k_read_bus_16(address);
 
 					case 0x30:	/* TIME */
 						if (cart_hw.time_r) return cart_hw.time_r(address);
@@ -499,11 +493,12 @@ unsigned int m68k_read_memory_16 (unsigned int address)
 			return *(uint16 *)(rom_readmap[offset] + (address & 0x7ffff));
 		
 		case EEPROM:
-      if (address == (eeprom.type.sda_out_adr & 0xfffffe)) return eeprom_read(address, 1);
+       		if (address == eeprom.type.sda_out_adr) return eeprom_read(address);
 			return *(uint16 *)(rom_readmap[offset] + (address & 0x7ffff));
 
 		case J_CART:
-			return jcart_read();
+			if (address == eeprom.type.sda_out_adr) return eeprom_read(address); /* some games also have EEPROM mapped here */
+			else return jcart_read();
 			
 		case REALTEC_ROM:
 			return *(uint16 *)(&cart_rom[0x7e000] + (address & 0x1fff));
@@ -538,19 +533,19 @@ unsigned int m68k_read_memory_16 (unsigned int address)
         }
 
         case 0x04:  /* MSB PEN X coordinate */
-          return (input.analog[0][0] >> 8);
+          return (input.analog[0] >> 8);
 
         case 0x06:  /* LSB PEN X coordinate */
-          return (input.analog[0][0] & 0xff);
+          return (input.analog[0] & 0xff);
 
         case 0x08:  /* MSB PEN Y coordinate */
-          return (input.analog[0][1] >> 8);
+          return (input.analog[1] >> 8);
 
         case 0x0a:  /* LSB PEN Y coordinate */
-          return (input.analog[0][1] & 0xff);
+          return (input.analog[1] & 0xff);
 
         case 0x0c:  /* PAGE register */
-          return pico_page[pico_current]; /* TODO */
+          return 0x00; /* TODO */
 
         case 0x10:  /* PCM data register */
           return 0x8000; /* TODO */
@@ -580,7 +575,7 @@ void m68k_write_memory_8(unsigned int address, unsigned int value)
 {
 	int offset = address >> 19;
 
-  switch (m68k_writemap_8[offset])
+	switch (m68k_writemap_8[offset])
   {
 		case VDP:
 			/* Valid VDP addresses */
@@ -654,7 +649,7 @@ void m68k_write_memory_8(unsigned int address, unsigned int value)
 			   	m68k_unused_8_w (address, value);
 			   	return;
 			  }
-           
+	  			
 				/* Read data from Z bus */
 				switch (base & 0x60)
 				{
@@ -680,7 +675,6 @@ void m68k_write_memory_8(unsigned int address, unsigned int value)
 
 					default: /* ZRAM */
 						zram[address & 0x1fff] = value;
-            count_m68k ++;
 						return;
 				}
 			}
@@ -763,7 +757,7 @@ void m68k_write_memory_8(unsigned int address, unsigned int value)
 			return;
 		
 		case EEPROM:
-      if ((address == eeprom.type.sda_in_adr) || (address == eeprom.type.scl_adr)) eeprom_write(address, value, 0);
+			if ((address == eeprom.type.sda_in_adr) || (address == eeprom.type.scl_adr)) eeprom_write(address, value);
 			else m68k_unused_8_w(address, value);
 			return;
 			
@@ -912,16 +906,21 @@ void m68k_write_memory_16 (unsigned int address, unsigned int value)
 					  return;
 						
 					case 0x50:  /* SVP REGISTERS */
-						if (svp && ((address & 0xfd) == 0))
+						if (!svp) return;
+						switch (address & 0xff)
 						{
+							case 0:
+							case 2:
 								/* just guessing here (Notaz) */
 								svp->ssp1601.gr[SSP_XST].h = value;
 								svp->ssp1601.gr[SSP_PM0].h |= 2;
 								svp->ssp1601.emu_status &= ~SSP_WAIT_PM0;
 								return;
-            }
-            m68k_unused_16_w(address, value);
-            return;
+
+							default:
+								m68k_unused_16_w(address, value);
+								return;
+						}
 
 					case 0x30:	/* TIME */
 						if (cart_hw.time_w)
@@ -980,13 +979,13 @@ void m68k_write_memory_16 (unsigned int address, unsigned int value)
 			return;
 
 		case EEPROM:
-      if ((address == (eeprom.type.sda_in_adr&0xfffffe)) || (address == (eeprom.type.scl_adr&0xfffffe)))
-        eeprom_write(address, value, 1);
+			if ((address == eeprom.type.sda_in_adr) || (address == eeprom.type.scl_adr)) eeprom_write(address, value);
 			else m68k_unused_16_w (address, value);
 			return;
 		
 		case J_CART:
-			jcart_write(value);
+			if ((address == eeprom.type.sda_in_adr) || (address == eeprom.type.scl_adr)) eeprom_write(address, value);
+			else jcart_write(value);
 			return;
 
 		case UNUSED:

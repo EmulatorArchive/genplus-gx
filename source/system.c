@@ -38,6 +38,7 @@ uint32 z80cycles_per_line;
 uint32 aim_m68k;
 uint32 count_m68k;
 uint32 line_m68k;
+uint32 hint_m68k;
 uint32 aim_z80;
 uint32 count_z80;
 uint32 line_z80;
@@ -60,17 +61,18 @@ static void audio_update (void);
  */
 static inline void update_interrupts(void)
 {
-	uint8 latency = hvint_updated;
+	uint8 vint_latency = hvint_updated;
 	hvint_updated = -1;
 
 	if (vint_pending && (reg[1] & 0x20))
 	{
     vint_triggered = 1;
-    if (latency) count_m68k += m68k_execute(latency);
+    if (vint_latency) count_m68k += m68k_execute(vint_latency);
 		m68k_set_irq(6);
 	}
 	else if (hint_pending && (reg[0] & 0x10))
 	{
+		hint_m68k = count_m68k;
 		m68k_set_irq(4);
 	}
 	else
@@ -209,14 +211,17 @@ int system_frame (int do_skip)
     /* Update VCounter */
 		v_counter = line;
 
-		/* 6-Buttons or Menacer update */
-		input_update();
-
- 		/* Update CPU cycle counters */
-    line_m68k = aim_m68k;
+		/* Update CPU cycles to go */
+    hint_m68k = line_m68k = aim_m68k;
 		line_z80  = aim_z80;
     aim_z80  += z80cycles_per_line;
     aim_m68k += m68cycles_per_line;
+
+		/* 6-Buttons or Menacer update */
+		input_update();
+
+    /* Check if there is any DMA in progess */
+    if (dma_length) dma_update();
 
 		/* Check "soft reset" */
 		if (line == resetline) gen_reset(0);
@@ -229,20 +234,8 @@ int system_frame (int do_skip)
 				h_counter = reg[10];
 				hint_pending = 1;
         hvint_updated = 0;
-				
-        /* previous scanline was shortened (see below), we execute extra cycles on this line */
-        if (line != 0) aim_m68k += 36; 
       }
-
-      /* HINT will be triggered on next line, approx. 36 cycles before VDP starts line rendering */
-      /* during this period, any VRAM/CRAM/VSRAM writes should NOT be taken in account before next line */
-      /* as a result, current line is shortened */
-      /* fix Lotus 1, Lotus 2 RECS, Striker, Zero the Kamikaze Squirell */
-      if ((line < bitmap.viewport.h)&&(h_counter == 0)) aim_m68k -= 36; 
 		}
-
-    /* Check if there is any DMA in progess */
-    if (dma_length) dma_update();
 
     /* Render Line */
     if (!do_skip) 

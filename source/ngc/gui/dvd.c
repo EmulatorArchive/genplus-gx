@@ -20,7 +20,6 @@
 #ifdef WII_DVD
 #include "wdvd.h"
 #endif
-#include "dvd.h"
 
 /** DVD I/O Address base **/
 #ifndef HW_RVL
@@ -44,14 +43,14 @@ u64 DvdMaxOffset = 0x57057C00; // default
  ***************************************************************************/
 int dvd_read (void *dst, unsigned int len, u64 offset)
 {
-#ifndef HW_RVL
-  //unsigned char *buffer = (unsigned char *) (unsigned int) DVDreadbuffer;
+  unsigned char *buffer = (unsigned char *) (unsigned int) DVDreadbuffer;
   
- // if (len > 2048) return 1; /*** We only allow 2k reads **/
- /* DCInvalidateRange((void *)buffer, len);
+  if (len > 2048) return 1; /*** We only allow 2k reads **/
+  DCInvalidateRange((void *)buffer, len);
 
   if(offset < DvdMaxOffset)
   {
+#ifndef HW_RVL
       dvd[0] = 0x2E;
       dvd[1] = 0;
       dvd[2] = 0xA8000000;
@@ -59,21 +58,20 @@ int dvd_read (void *dst, unsigned int len, u64 offset)
       dvd[4] = len;
       dvd[5] = (u32) buffer;
       dvd[6] = len;
-      dvd[7] = 3; *//*** Enable reading with DMA ***/
-   //   while (dvd[7] & 1);
-    //  memcpy (dst, buffer, len);
- // }
- // else return 1; // Let's not read past end of DVD
-   
-//  if (dvd[0] & 0x4) return 0; /* Ensure it has completed */
-  if (DVD_LowRead(dst,len,offset,NULL) == 1)
-    return 0;
+      dvd[7] = 3; /*** Enable reading with DMA ***/
+      while (dvd[7] & 1);
+      memcpy (dst, buffer, len);
 #elif WII_DVD
-
-  if (WDVD_LowUnencryptedRead((unsigned char **)&dst, len, (u32)(offset >> 2)) == 1)
-    return 0;
+      if (WDVD_LowUnencryptedRead((unsigned char **)&dst, len, (u32)(offset >> 2)) == 1)
+        return 0;
 #endif
- 
+  }
+  else return 1; // Let's not read past end of DVD
+   
+#ifndef HW_RVL
+  if (dvd[0] & 0x4) return 0; /* Ensure it has completed */
+#endif
+  
   return 1;
 }
 
@@ -89,11 +87,7 @@ int dvd_read (void *dst, unsigned int len, u64 offset)
 #ifndef HW_RVL
 void uselessinquiry ()
 {
-  dvddrvinfo drive_info;
 
-  DVD_LowInquiry(&drive_info,NULL);
-
-/*
   dvd[0] = 0;
   dvd[1] = 0;
   dvd[2] = 0x12000000;
@@ -103,7 +97,7 @@ void uselessinquiry ()
   dvd[6] = 0x20;
   dvd[7] = 1;
 
-  while (dvd[7] & 1);*/
+  while (dvd[7] & 1);
 }
 #endif
 
@@ -117,10 +111,6 @@ void uselessinquiry ()
 #ifndef HW_RVL
 void dvd_motor_off( )
 {
-
-  DVD_LowStopMotor(NULL);
-
-  /*
 	dvd[0] = 0x2e;
 	dvd[1] = 0;
 	dvd[2] = 0xe3000000;
@@ -129,11 +119,11 @@ void dvd_motor_off( )
 	dvd[5] = 0;
 	dvd[6] = 0;
 	dvd[7] = 1; // Do immediate
-	while (dvd[7] & 1);*/
+	while (dvd[7] & 1);
 
 	/*** PSO Stops blackscreen at reload ***/
-/*	dvd[0] = 0x14;
-	dvd[1] = 0;*/
+	dvd[0] = 0x14;
+	dvd[1] = 0;
 }
 #endif
 
@@ -146,7 +136,7 @@ void dvd_motor_off( )
 #ifndef HW_RVL
 void dvd_drive_detect()
 {
-  /*dvd[0] = 0x2e;
+  dvd[0] = 0x2e;
   dvd[1] = 0;
   dvd[2] = 0x12000000;
   dvd[3] = 0;
@@ -155,14 +145,9 @@ void dvd_drive_detect()
   dvd[6] = 0x20;
   dvd[7] = 3;
   while( dvd[7] & 1 );
-  DCFlushRange((void *)0x80000000, 32);*/
+  DCFlushRange((void *)0x80000000, 32);
 
-  dvddrvinfo drive_info;
-
-  DVD_LowInquiry(&drive_info,NULL);
-
-  //int driveid = (int)inquiry[2];
-  int driveid = drive_info.dev_code;
+  int driveid = (int)inquiry[2];
   
   if ((driveid == 4) || (driveid == 6) || (driveid == 8))
   {

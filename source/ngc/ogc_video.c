@@ -466,10 +466,6 @@ static void gxScale(void)
 	square[4] = square[1]  =  yscale + yshift;
 	square[7] = square[10] = -yscale + yshift;
 	draw_init();
-
-  /* vertex array have been modified */
-  GX_InvVtxCache ();
-
 }	
 
 /* Reinitialize GX */
@@ -572,6 +568,7 @@ void ogc_video__update()
     }
   }
 
+  GX_InvVtxCache ();
   GX_InvalidateTexAll ();
  
   /* update texture data */
@@ -585,7 +582,7 @@ void ogc_video__update()
       *dst++ = *src4++;
     }
     
-    /* jump to next four lines */
+    /* jumpt to next four lines */
     src1 += stride;
     src2 += stride;
     src3 += stride;

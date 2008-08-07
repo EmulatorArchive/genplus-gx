@@ -201,40 +201,7 @@ static void pad_update(s8 num, u8 i)
     ConfigRequested = 1;
   }
 
-  int temp;
-  if (input.dev[i] == DEVICE_LIGHTGUN)
-  {
-    temp = input.analog[i-4][0];
-    if ((input.pad[i] & INPUT_RIGHT)) temp ++;
-    else if ((input.pad[i] & INPUT_LEFT)) temp --;
-    if (temp < 0) temp = 0;
-    else if (temp > bitmap.viewport.w) temp = bitmap.viewport.w;
-    input.analog[i-4][0] = temp;
-
-    temp = input.analog[i-4][1];
-    if ((input.pad[i] & INPUT_UP)) temp --;
-    if ((input.pad[i] & INPUT_DOWN)) temp ++;
-    if (temp < 0) temp = 0;
-    else if (temp > bitmap.viewport.h) temp = bitmap.viewport.h;
-    input.analog[i-4][1] = temp;
-  }	
-  else if ((system_hw == SYSTEM_PICO) && (i == 0))
-  {
-    temp = input.analog[0][0];
-    if ((input.pad[i] & INPUT_RIGHT)) temp ++;
-    else if ((input.pad[i] & INPUT_LEFT)) temp --;
-    if (temp < 0x17c) temp = 0x17c;
-    else if (temp > 0x3c) temp = 0x3c;
-    input.analog[0][0] = temp;
-
-    temp = input.analog[0][1];
-    if ((input.pad[i] & INPUT_UP)) temp --;
-    if ((input.pad[i] & INPUT_DOWN)) temp ++;
-    if (temp < 0x1fc) temp = 0x1fc;
-    else if (temp > 0x3f3) temp = 0x3f3;
-    input.analog[0][1] = temp;
-  }
-
+  if (input.dev[i] == DEVICE_LIGHTGUN) lightgun_set(i);
 }
 
 /*******************************
@@ -429,27 +396,7 @@ static void wpad_update(s8 num, u8 i, u32 exp)
   /* MODE Button */
   if ((p & WPAD_CLASSIC_BUTTON_MINUS) || (p & WPAD_BUTTON_MINUS)) input.pad[i]  |= INPUT_MODE;
 
-  /* ANALOG Device (use IR pointing by default) */
-  if (input.dev[i] == DEVICE_LIGHTGUN)
-  {
-    struct ir_t ir;
-    WPAD_IR(num, &ir);
-    if (ir.valid)
-    {
-      input.analog[i-4][0] = (ir.x * bitmap.viewport.w) / 640;
-      input.analog[i-4][1] = (ir.y * bitmap.viewport.h) / 480;
-    }
-  }
-  else if ((system_hw == SYSTEM_PICO) && (i == 0))
-  {
-    struct ir_t ir;
-    WPAD_IR(num, &ir);
-    if (ir.valid)
-    {
-      input.analog[0][0] = 0x3c  + (ir.x * (0x17c - 0x3c  + 1)) / 640;
-      input.analog[0][1] = 0x1fc + (ir.y * (0x3f3 - 0x1fc + 1)) / 480;
-    }
-  }
+  if (input.dev[i] == DEVICE_LIGHTGUN) lightgun_set(i);
 
   /* SOFTRESET */
   if (((p & WPAD_CLASSIC_BUTTON_PLUS) && (p & WPAD_CLASSIC_BUTTON_MINUS)) ||

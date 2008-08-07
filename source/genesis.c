@@ -38,6 +38,8 @@ uint32 rom_size;
 int32 resetline;
 uint8 *rom_readmap[8];
 
+static uint16 cpu_sync[512];
+
 /*--------------------------------------------------------------------------*/
 /* Init, reset, shutdown functions                                          */
 /*--------------------------------------------------------------------------*/
@@ -54,6 +56,7 @@ void gen_init (void)
 	m68k_set_cpu_type (M68K_CPU_TYPE_68000);
 	m68k_init();
 	z80_init(0,0,0,z80_irq_callback);
+	for (i=0; i<512; i++) cpu_sync[i] = (uint16)((((double)i * 7.0) / 15.0) + 0.5);
 
 	/* default 68000 mapping */
 	for (i=16; i<24; i++)
@@ -174,7 +177,7 @@ void gen_busreq_w (unsigned int state)
 			/* Z80 stopped */
 			/* z80 was ON during the last 68k cycles */
 			/* we execute the appropriate number of z80 cycles */
-			z80_cycles_to_run = line_z80 + ((count_m68k - line_m68k)*7)/15;
+			z80_cycles_to_run = line_z80 + cpu_sync[count_m68k - line_m68k];
 			z80_run(z80_cycles_to_run);
 		}
 	}
@@ -186,7 +189,7 @@ void gen_busreq_w (unsigned int state)
 			/* Z80 started */
 			/* z80 was OFF during the last 68k cycles */
 			/* we burn the appropriate number of z80 cycles */
-			z80_cycles_to_run = line_z80 + ((count_m68k - line_m68k)*7)/15;
+			z80_cycles_to_run = line_z80 + cpu_sync[count_m68k - line_m68k];
 			count_z80 = z80_cycles_to_run;
 		}
 	}
@@ -207,7 +210,7 @@ void gen_reset_w (unsigned int state)
 			/* Z80 started */
 			/* z80 was OFF during the last 68k cycles */
 			/* we burn the appropriate number of z80 cycles */
-			z80_cycles_to_run = line_z80 + ((count_m68k - line_m68k)*7)/15;
+			z80_cycles_to_run = line_z80 + cpu_sync[count_m68k - line_m68k];
 			count_z80 = z80_cycles_to_run;
 		}
 	}
@@ -219,7 +222,7 @@ void gen_reset_w (unsigned int state)
 			/* Z80 stopped */
 			/* z80 was ON during the last 68k cycles */
 			/* we execute the appropriate number of z80 cycles */
-			z80_cycles_to_run = line_z80 + ((count_m68k - line_m68k)*7)/15;
+			z80_cycles_to_run = line_z80 + cpu_sync[count_m68k - line_m68k];
 			z80_run(z80_cycles_to_run);
 		}
 

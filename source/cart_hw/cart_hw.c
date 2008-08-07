@@ -25,9 +25,8 @@
  ***************************************************************************/
 
 #include "shared.h"
-#include "m68kcpu.h"
 
-#define CART_CNT 26
+#define CART_CNT 22
 
 /* Function prototypes */
 void default_time_w(unsigned int address, unsigned int value);
@@ -85,24 +84,16 @@ T_CART_ENTRY rom_database[CART_CNT] =
 	{0x0000,0x9d0e,8,8,{{0x0c,0x88,0,0},{0xffffff,0xffffff,0,0},{0xa13000,0x400004,0,0},0,default_regs_r,0,default_regs_r,0}},
 /* A Bug's Life */
 	{0x7f7f,0x2aad,0,0,{{0x28,0x1f,0x01,0},{0xffffff,0xffffff,0xffffff,0},{0xa13000,0xa13002,0xa1303e,0},0,default_regs_r,0,0,0}},
-/* King of Fighter 99 */
-	{0x0000,0x21e,0,0,{{0x00,0x01,0x1f,0},{0xffffff,0xffffff,0xffffff,0},{0xa13000,0xa13002,0xa1303e,0},0,default_regs_r,0,0,0}},
-/* Pocket Monster */
-	{0xd6fc,0x1eb1,0,0,{{0x00,0x01,0x1f,0},{0xffffff,0xffffff,0xffffff,0},{0xa13000,0xa13002,0xa1303e,0},0,default_regs_r,0,0,0}},
 /* Lion King 3 */
 	{0x0000,0x507c,12,15,{{0,0,0,0},{0xf0000e,0xf0000e,0xf0000e,0},{0x600000,0x600002,0x600004,0},0,0,0,default_regs_r,special_regs_w}},
 /* Super King Kong 99 */
 	{0x0000,0x7d6e,12,15,{{0,0,0,0},{0xf0000e,0xf0000e,0xf0000e,0},{0x600000,0x600002,0x600004,0},0,0,0,default_regs_r,special_regs_w}},
-/* Pokemon Stadium */
-	{0x0000,0x843c,14,15,{{0,0,0,0},{0,0,0,0},{0,0,0,0},0,0,0,0,special_regs_w}},
 /* Elf Wor */
 	{0x0080,0x3dba,8,8,{{0x55,0x0f,0xc9,0x18},{0xffffff,0xffffff,0xffffff,0xffffff},{0x400000,0x400002,0x400004,0x400006},0,0,0,default_regs_r,0}},
 /* Huan Le Tao Qi Shu - Smart Mouse */
 	{0x0000,0x1a28,8,8,{{0x55,0x0f,0xaa,0xf0},{0xffffff,0xffffff,0xffffff,0xffffff},{0x400000,0x400002,0x400004,0x400006},0,0,0,default_regs_r,0}},
 /* Ya-Se Chuanshuo */
 	{0xffff,0xd472,8,8,{{0x63,0x98,0xc9,0x18},{0xffffff,0xffffff,0xffffff,0xffffff},{0x400000,0x400002,0x400004,0x400006},0,0,0,default_regs_r,0}},
-/* Soul Blade */
-	{0x0000,0x0c5b,8,8,{{0x00,0x98,0xc9,0xF0},{0xffffff,0xffffff,0xffffff,0xffffff},{0x400000,0x400002,0x400004,0x400006},0,0,0,default_regs_r,0}},
 /* King of Fighter 98 */
 	{0x0000,0xd0a0,9,9,{{0xaa,0xa0,0xf0,0xa0},{0xfc0000,0xffffff,0xffffff,0xffffff},{0x480000,0x4c82c0,0x4cdda0,0x4f8820},0,0,0,default_regs_r,0}},
 /* Lian Huan Pao - Barver Battle Saga */
@@ -211,44 +202,16 @@ void cart_hw_init()
 	/**********************************************
 					SEGA MENACER 
 	***********************************************/
-  input.x_offset = 0;
-  input.y_offset = 0;
-
 	if (strstr(rominfo.product,"MK-1658") != NULL)    /* Menacer 6-in-1 pack */
 	{
 		/* save current setting */
     if (old_system[0] == -1) old_system[0] = input.system[0];
     if (old_system[1] == -1) old_system[1] = input.system[1];
      
+    /* PORT B by default */
     input.system[0] = NO_SYSTEM;
     input.system[1] = SYSTEM_MENACER;
-
-    /* specific game adjustment */
-    input.x_offset = 0x52;
 	}
-	else if (strstr(rominfo.product,"T-081156") != NULL)    /* T2: Arcade Game */
-  {
-    input.system[0] = SYSTEM_GAMEPAD;
-    input.system[1] = SYSTEM_MENACER;
-
-    /* specific game adjustment */
-    input.x_offset = 0x84;
-    input.y_offset = 8;
-	}
-	else if (strstr(rominfo.product,"T-95136") != NULL)    /* Lethal Enforcers II */
-  {
-    input.system[0] = SYSTEM_GAMEPAD;
-    input.system[1] = SYSTEM_JUSTIFIER;
-
-    /* specific game adjustment */
-  input.x_offset = 0x18;
-	}
-	else if ((strstr(rominfo.product,"T-95096") != NULL) ||   /* Lethal Enforcers (USA,Europe) */
-           (strstr(rominfo.product,"T-95073") != NULL))     /* Lethal Enforcers (J)*/
-  {
-    input.system[0] = SYSTEM_GAMEPAD;
-    input.system[1] = SYSTEM_JUSTIFIER;
-  }
 
 	/**********************************************
 					J-CART 
@@ -289,16 +252,7 @@ void cart_hw_init()
       m68k_readmap_8[i]	  = UMK3_HACK;
       m68k_readmap_16[i]	= UMK3_HACK;
     }
-
-#if M68K_EMULATE_ADDRESS_ERROR
-    /* this game does not work properly on real hardware */
-    emulate_address_error = 0;  
-#endif
   }
-#if M68K_EMULATE_ADDRESS_ERROR
-  /* default behavior */
-  else emulate_address_error = 1; 
-#endif
 
 	/**********************************************
 				Mappers & HW registers 
@@ -453,6 +407,7 @@ void realtec_mapper_w(unsigned int address, unsigned int value)
 			return;
 
 		default:
+			//m68k_unused_8_w(address, value);
 			return;
 	}
 }

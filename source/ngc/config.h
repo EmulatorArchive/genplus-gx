@@ -30,7 +30,6 @@ typedef struct
   uint16 pad_keymap[4][MAX_KEYS];
   uint32 wpad_keymap[4*3][MAX_KEYS];
   t_input_config input[MAX_DEVICES];
-  uint8 crosshair;
 } t_config;
 
 extern t_config config;

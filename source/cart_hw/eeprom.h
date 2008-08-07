@@ -86,7 +86,7 @@ extern T_EEPROM eeprom;
 
 /* Function prototypes */
 extern void eeprom_init();
-extern void eeprom_write(uint32 address, uint32 value, uint32 word_access);
-extern uint32 eeprom_read(uint32 address, uint32 word_access);
+extern void eeprom_write(unsigned int address, unsigned int value);
+extern unsigned int eeprom_read(unsigned int address);
 
 #endif

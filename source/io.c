@@ -60,6 +60,11 @@ void io_reset(void)
       port[0].data_r = gamepad_1_read;
       break;
 
+    case SYSTEM_MENACER:
+      port[0].data_w = NULL;
+      port[0].data_r = lightgun_1_read;
+      break;
+
     case SYSTEM_WAYPLAY:
 			port[0].data_w = wayplay_1_write;  
 			port[0].data_r = wayplay_1_read;
@@ -85,12 +90,7 @@ void io_reset(void)
 
     case SYSTEM_MENACER:
       port[1].data_w = NULL;
-      port[1].data_r = menacer_read;
-      break;
-
-    case SYSTEM_JUSTIFIER:
-      port[1].data_w = NULL;
-      port[1].data_r = justifier_read;
+      port[1].data_r = lightgun_2_read;
       break;
 
     case SYSTEM_WAYPLAY:
@@ -147,19 +147,19 @@ void io_write(unsigned int offset, unsigned int value)
     case 0x06:			/* Port C Ctrl */
       io_reg[offset] = value & 0xFF;
       io_reg[offset-3] = ((io_reg[offset-3] & 0x80) | (io_reg[offset-3] & io_reg[offset]));
-      return;
+      break;
 
     case 0x07:			/* Port A TxData */
     case 0x0A:			/* Port B TxData */
     case 0x0D:			/* Port C TxData */
       io_reg[offset] = value;
-      return;
+      break;
 
     case 0x09:			/* Port A S-Ctrl */
     case 0x0C:			/* Port B S-Ctrl */
     case 0x0F:			/* Port C S-Ctrl */
       io_reg[offset] = (value & 0xF8);
-      return;
+      break;
   }
 }
   

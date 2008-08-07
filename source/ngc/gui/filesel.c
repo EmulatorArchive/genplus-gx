@@ -6,8 +6,6 @@
  *   . DVD access
  *   . easy subdirectory browsing
  *   . ROM browser
- *   . alphabetical file sorting (Marty Disibio)
- *   . load from history list (Marty Disibio)
  *
  ***************************************************************************/
 #include "shared.h"

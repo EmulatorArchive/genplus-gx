@@ -1,24 +1,6 @@
 Genesis Plus for Gamecube
 ------------------------------
 
-current:
----------
-[Genesis]
-- "cycle-accurate" HINT timings: every timing sensitive games/demos are now *finally* working fine
-- fixed CRAM/VSRAM DMA timings
-- fixed SAT address mask on VRAM writes 
-- improved accuracy of 68k access to Z80: fix music in Pacman 2 when entering PAUSE menu
-- disabled "Address Error" emulation when UMK3 hack is loaded: fix game crashing after a round ends up
-- added support for some additional protected "pirate" games: Pocket Monster, King of Fighter 98, Soul Blade (credits to Haze)
-- improved overall Menacer emulation accuracy
-- fixed Menacer support in Terminator 2: Arcade Game
-- added Konami Justifier emulation: fix lightgun support in Lethal Enforcers 1 & 2
-- (YM2612) fixed LFO phase update for CH3 special mode in MAME core: fix some SFX in Warlock & Alladin (thanks to AamirM)
-- (YM2612) fixed enveloppe attenuation level on "KEY ON" in MAME core: fix Ecco 2's splash sound
-
-[Wii]
-- added Wiimote IR pointing for LightGun control (Menacer/Justifier)
-
 16/07/2008:
 -----------
 [Genesis]

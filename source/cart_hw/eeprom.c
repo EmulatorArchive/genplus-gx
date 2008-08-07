@@ -32,9 +32,8 @@ T_GAME_ENTRY database[24] =
 {
 	/* ACCLAIM mappers */
 	/* 24C02 (old mapper) */
-	{{"T-081326"   }, 0,      {8,  0xFF,   0xFF,   0x200001, 0x200001, 0x200001, 0, 1, 1}},   /* NBA Jam (UE) */
-	{{"T-81033"    }, 0,      {8,  0xFF,   0xFF,   0x200001, 0x200001, 0x200001, 0, 1, 1}},   /* NBA Jam (J) */
-
+	{{"T-081326"   }, 0,      {8,  0xFF,   0xFF,   0x200000, 0x200000, 0x200000, 0, 1, 1}},   /* NBA Jam (UE) */
+	{{"T-81033"    }, 0,      {8,  0xFF,   0xFF,   0x200000, 0x200000, 0x200000, 0, 1, 1}},   /* NBA Jam (J) */
 	/* 24C02 */
 	{{"T-81406"    }, 0,      {8,  0xFF,   0xFF,   0x200001, 0x200001, 0x200000, 0, 0, 0}},   /* NBA Jam TE */
 	{{"T-081276"   }, 0,      {8,  0xFF,   0xFF,   0x200001, 0x200001, 0x200000, 0, 0, 0}},   /* NFL Quarterback Club */
@@ -45,8 +44,8 @@ T_GAME_ENTRY database[24] =
 	{{"T-81476"    }, 0,      {16, 0x1FFF, 0x1FFF, 0x200001, 0x200001, 0x200000, 0, 0, 0}},   /* Frank Thomas Big Hurt Baseball */
 	
 	/* EA mapper (24C01 only) */
-	{{"T-50396"    }, 0,      {7,  0x7F,   0x7F,   0x200001, 0x200001, 0x200001, 7, 7, 6}},   /* NHLPA Hockey 93 (UE) */
-	{{"T-50176"    }, 0,      {7,  0x7F,   0x7F,   0x200001, 0x200001, 0x200001, 7, 7, 6}},   /* Rings of Power */
+	{{"T-50396"    }, 0,      {7,  0x7F,   0x7F,   0x200000, 0x200000, 0x200000, 7, 7, 6}},   /* NHLPA Hockey 93 (UE) */
+	{{"T-50176"    }, 0,      {7,  0x7F,   0x7F,   0x200000, 0x200000, 0x200000, 7, 7, 6}},   /* Rings of Power */
 	
 	/* SEGA mapper (24C01 only) */
 	{{"T-12046"    }, 0,      {7,  0x7F,   0x7F,   0x200001, 0x200001, 0x200001, 0, 0, 1}},   /* Megaman - The Wily Wars */
@@ -56,7 +55,7 @@ T_GAME_ENTRY database[24] =
 	{{"G-5538"     }, 0,      {7,  0x7F,   0x7F,   0x200001, 0x200001, 0x200001, 0, 0, 1}},   /* Greatest Heavyweights of the Ring (J) */
 	{{"PR-1993"    }, 0,      {7,  0x7F,   0x7F,   0x200001, 0x200001, 0x200001, 0, 0, 1}},   /* Greatest Heavyweights of the Ring (E) */
 	{{"G-4060"     }, 0,      {7,  0x7F,   0x7F,   0x200001, 0x200001, 0x200001, 0, 0, 1}},   /* Wonderboy in Monster World */
-	{{"00001211-00"}, 0,      {7,  0x7F,   0x7F,   0x200001, 0x200001, 0x200001, 0, 0, 1}},   /* Sports Talk Baseball */
+	{{"00001211-00"}, 0,      {7,  0x7F,   0x7F,   0x200000, 0x200000, 0x200000, 0, 0, 1}},   /* Sports Talk Baseball */
 	
 	/* CODEMASTERS mapper */
 	/* 24C01 */
@@ -148,30 +147,15 @@ static inline void Detect_STOP()
 	}
 }
 
-void eeprom_write(uint32 address, uint32 value, uint32 word_access)
+void eeprom_write(unsigned int address, unsigned int value)
 {
-   error("eeprom write%d 0x%x = 0x%x (0x%x)\n", 8*(1+word_access), address, value, m68k_get_reg (NULL, M68K_REG_PC));
+	uint16 sram_address = 0;
 
 	/* decode SCL and SDA value */
-  if (word_access)
-  {
-    /* 16-bits access */
-    if (eeprom.type.sda_in_adr == address) eeprom.sda = (value >> (8 + eeprom.type.sda_in_bit)) & 1;        /* MSB */
-    else if (eeprom.type.sda_in_adr == (address | 1)) eeprom.sda = (value >> eeprom.type.sda_in_bit) & 1;   /* LSB */
-    else eeprom.sda = eeprom.old_sda;
-
-    if (eeprom.type.scl_adr == address) eeprom.scl = (value >> (8 + eeprom.type.scl_bit)) & 1;      /* MSB */
-    else if (eeprom.type.scl_adr == (address | 1)) eeprom.scl = (value >> eeprom.type.scl_bit) & 1; /* LSB */
-    else eeprom.scl = eeprom.old_scl;
-  }
-  else
-  {
 	if (eeprom.type.sda_in_adr == address) eeprom.sda = (value >> eeprom.type.sda_in_bit) & 1;
 	else eeprom.sda = eeprom.old_sda;
-
 	if (eeprom.type.scl_adr == address) eeprom.scl = (value >> eeprom.type.scl_bit) & 1;
 	else eeprom.scl = eeprom.old_scl;
-  }
 	
 	/* EEPROM current state */
 	switch (eeprom.state)
@@ -206,14 +190,8 @@ void eeprom_write(uint32 address, uint32 value, uint32 word_access)
 			/* look for SCL HIGH to LOW transition */
 			if (eeprom.old_scl && !eeprom.scl && (eeprom.cycles > 0))
 			{				
-				if (eeprom.cycles < 8)
-        {
-          eeprom.word_address |= (eeprom.old_sda << (7 - eeprom.cycles));
-				}
-        else if (eeprom.cycles == 8)
-        {
-          eeprom.rw = eeprom.old_sda;
-				}
+				if (eeprom.cycles < 8) eeprom.word_address |= (eeprom.old_sda << (7 - eeprom.cycles));
+				else if (eeprom.cycles == 8) eeprom.rw = eeprom.old_sda;
 				else
 				{	/* ACK CYCLE */
 					eeprom.cycles = 0;
@@ -394,7 +372,7 @@ void eeprom_write(uint32 address, uint32 value, uint32 word_access)
 				if (eeprom.cycles < 9)
 				{
 					/* Write DATA bits (max 64kBytes) */
-					uint16 sram_address = (eeprom.slave_mask | eeprom.word_address) & 0xFFFF;
+					sram_address = (eeprom.slave_mask | eeprom.word_address) & 0xFFFF;
 					if (eeprom.old_sda) sram.sram[sram_address] |= (1 << (8 - eeprom.cycles));
 					else sram.sram[sram_address] &= ~(1 << (8 - eeprom.cycles));
 
@@ -416,9 +394,9 @@ void eeprom_write(uint32 address, uint32 value, uint32 word_access)
 	eeprom.old_sda = eeprom.sda;
 }
 
-uint32 eeprom_read(uint32 address, uint32 word_access)
+unsigned int eeprom_read(unsigned int address)
 {
-   error("eeprom read%d 0x%x (0x%x)\n", 8*(1+word_access), address, m68k_get_reg (NULL, M68K_REG_PC));
+	uint16 sram_address;
 	uint8 sda_out = eeprom.sda;
 
 	/* EEPROM state */
@@ -428,7 +406,7 @@ uint32 eeprom_read(uint32 address, uint32 word_access)
 			if (eeprom.cycles < 9)
 			{
 				/* Return DATA bits (max 64kBytes) */
-				uint16 sram_address = (eeprom.slave_mask | eeprom.word_address) & 0xffff;
+				sram_address = (eeprom.slave_mask | eeprom.word_address) & 0xFFFF;
 				sda_out = (sram.sram[sram_address] >> (8 - eeprom.cycles)) & 1;
 
 				if (eeprom.cycles == 8)
@@ -452,12 +430,5 @@ uint32 eeprom_read(uint32 address, uint32 word_access)
 			break;
 	}
 
-  /* memory access */
-  if (word_access)
-  {
-    /* 16-bits access */
-    if (eeprom.type.sda_out_adr & 1) return (sda_out << eeprom.type.sda_out_bit); /* LSB */
-    else return (sda_out << (eeprom.type.sda_out_bit + 8));  /* MSB */
-  }
-  else return (sda_out << eeprom.type.sda_out_bit);
+	return (sda_out << eeprom.type.sda_out_bit);
 }

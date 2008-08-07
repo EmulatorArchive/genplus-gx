@@ -123,7 +123,7 @@ static uint8 vdptiming = 1;
 
 */
 static const uint8 dma_rates[16] = {
-  	8,  9, 83 , 102,  /* 68K to VRAM */
+  	8,  9, 84 , 102,  /* 68K to VRAM */
 	16, 18, 167, 205, /* 68K to CRAM or VSRAM */
 	15, 17, 166, 204, /* DMA fill */
   	8,  9, 83 , 102,  /* DMA Copy */
@@ -216,7 +216,7 @@ void vdp_reset(void)
 	/* reset border area */
 	bitmap.viewport.x = config.overscan ? 12 : 0;
 	bitmap.viewport.y = config.overscan ? (vdp_pal ? 32 : 8) : 0;
-  	bitmap.viewport.changed = 1;
+  bitmap.viewport.changed = 1;
 
 	/* initialize some registers (normally set by BIOS) */
 	if (config.bios_enabled != 3)
@@ -226,9 +226,6 @@ void vdp_reset(void)
 		vdp_reg_w(12, 0x81);	/* H40 mode */
 		vdp_reg_w(15, 0x02);	/* auto increment */
 	}
-
-  	/* default latency */
-  	fifo_latency = 27;
 }
 
 void vdp_shutdown(void)
@@ -378,7 +375,7 @@ static inline void dma_vbus (void)
 	base = source;
 
 	/* DMA timings */
-	dma_type = (code & 0x06) ? 1 : 0;
+	dma_type = (code & 0x01) ? 0 : 1;
 	dma_length = length;
 	dma_update();
 
@@ -422,7 +419,7 @@ static inline void dma_fill(unsigned int data)
 	{
 		do
 		{
-			/* update internal SAT (fix Battletech) */
+			/* update internal SAT (see Battletech) */
 			WRITE_BYTE(sat, (addr & sat_addr_mask)^1, data);
 
 			WRITE_BYTE(vram, addr^1, data);
@@ -483,7 +480,7 @@ static inline void data_write (unsigned int data)
 			/* Copy SAT data to the internal SAT */
 			if ((addr & sat_base_mask) == satb)
 			{
-				*(uint16 *) &sat[addr & sat_addr_mask & 0xFFFE] = data;
+				*(uint16 *) &sat[addr & sat_addr_mask] = data;
 			}
 
 			/* Only write unique data to VRAM */
@@ -549,7 +546,6 @@ void vdp_ctrl_w(unsigned int data)
 		/* Save address bits A15 and A14 */
 		addr_latch = (addr & 0xC000);
 
-		/* DMA operation */
 		if ((code & 0x20) && (reg[1] & 0x10))
 		{
 			switch (reg[23] & 0xC0)
@@ -723,6 +719,7 @@ void vdp_reg_w(unsigned int r, unsigned int d)
   {
     case 0x00: /* CTRL #1 */
 			if ((d&0x10) != (reg[0]&0x10)) hvint_updated = 0;
+			if (!(d & 0x02)) hc_latch = -1; /* latch HVC */
       break;
 
     case 0x01: /* CTRL #2 */
@@ -742,10 +739,10 @@ void vdp_reg_w(unsigned int r, unsigned int d)
 		    if (vdp_pal) vctab = (d & 8) ? vc_pal_240 : vc_pal_224;
       }
 			
-      /* DISPLAY switched ON/OFF during HBLANK */
-			if ((v_counter < bitmap.viewport.h) && ((d&0x40) != (reg[1]&0x40)))
+      /* DISPLAY swwitched ON/OFF during HBLANK */
+      if ((d&0x40) != (reg[1]&0x40))
       {
-        if (count_m68k <= (line_m68k + 128))
+        if (count_m68k <= (hint_m68k + 120))
         {
           /* Redraw the current line :
             - Legend of Galahad, Lemmings 2, Nigel Mansell's World Championship Racing (set display OFF)

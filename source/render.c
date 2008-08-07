@@ -580,7 +580,7 @@ void render_shutdown(void)
 /*--------------------------------------------------------------------------*/
 /* Line render function                           */
 /*--------------------------------------------------------------------------*/
-void remap_buffer(int line, int width)
+void remap_buffer(line,width)
 {
   /* get line offset from framebuffer */
   int offset = vdp_pal ? bitmap.viewport.y : (bitmap.viewport.y*11/8); // NTSC is 243 lines
@@ -685,25 +685,6 @@ void render_line(int line, uint8 odd_frame)
 		memset(&lb[0x20 + bitmap.viewport.w], 0x40 | border, bitmap.viewport.x);
 		width += 2 * bitmap.viewport.x;
 	}
-
-  /* LightGun mark */
-  if ((input.dev[4] == DEVICE_LIGHTGUN) && (config.crosshair))
-  {
-    int dy = v_counter - input.analog[0][1];
-
-    if (abs(dy) < 6)
-    {
-      int i;
-      int start = input.analog[0][0] - 4;
-      int end = start + 8;
-      if (start < 0) start = 0;
-      if (end > bitmap.viewport.w) end = bitmap.viewport.w;
-      for (i=start; i<end; i++)
-      {
-        lb[0x20+i] = 0xff;
-      }
-    }
-  }
 
   remap_buffer(line,width);
 }

@@ -63,6 +63,5 @@ void set_config_defaults(void)
 
   /* controllers options */
   ogc_input__set_defaults();
-  config.crosshair = 0;
 }
 
