@@ -1,25 +1,28 @@
-/***************************************************************************************
- *  Genesis Plus 1.2a
- *
- *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Sound Hardware
- ****************************************************************************************/
+/*
+    Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+/*
+    FM and PSG handlers
+*/  
+/*  EkeEke:
+    . fixed FM timers
+    . added support for Gens YM2612
+    . added cycle accurate samples
+*/
 
 #include "shared.h"
 
@@ -91,13 +94,13 @@ void sound_init(int rate)
 	SN76489_Init(0, (int)zclk, rate);
 	SN76489_Config(0, MUTE_ALLON, VOL_FULL, FB_SEGAVDP, SRW_SEGAVDP, 0);
 
-	if (config.fm_core)
+	if (FM_GENS)
 	{
 		_YM2612_Write  = YM2612_Write;
 		_YM2612_Read   = YM2612_Read;
 		_YM2612_Update = YM2612_Update;
 		_YM2612_Reset  = YM2612_Reset;
-		YM2612_Init((int)vclk, rate, config.hq_fm);
+		YM2612_Init((int)vclk, rate, hq_fm);
 	}
 	else
 	{

@@ -1,8 +1,7 @@
-/***************************************************************************************
+/****************************************************************************
  *  Genesis Plus 1.2a
- *  SRAM Hardware
  *
- *  code by Eke-Eke, GC/Wii port
+ *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,7 +17,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- ****************************************************************************************/
+ *  SRAM MANAGER
+ ***************************************************************************/
 
 #include "shared.h"
 
@@ -47,22 +47,22 @@ void sram_init()
 
   if ((cart_rom[0x1b0] == 0x52) && (cart_rom[0x1b1] == 0x41))
   {
-    /* retrieve informations from headezr */
+  	  /* retrieve informations from headezr */
 	  sram.detected = 1;
-    sram.start = READ_WORD_LONG(cart_rom, 0x1b4);
-    sram.end   = READ_WORD_LONG(cart_rom, 0x1b8);
+      sram.start = READ_WORD_LONG(cart_rom, 0x1b4);
+      sram.end   = READ_WORD_LONG(cart_rom, 0x1b8);
 
 	  /* fixe some bad header informations */
 	  if ((sram.start > sram.end) || ((sram.end - sram.start) >= 0x10000))
 	  sram.end = sram.start + 0xffff;
 	  sram.start &= 0xfffffffe;
-    sram.end |= 1;
+      sram.end |= 1;
   }
   else 
   {
 	  /* default SRAM region */
 	  sram.start = 0x200000;
-    sram.end = 0x20ffff;
+      sram.end = 0x20ffff;
   }
 
   /* set SRAM ON by default when ROM is not mapped */

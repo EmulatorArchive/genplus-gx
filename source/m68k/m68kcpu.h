@@ -554,7 +554,6 @@
 #if M68K_EMULATE_ADDRESS_ERROR
 	#include <setjmp.h>
 	extern jmp_buf m68ki_aerr_trap;
-  	extern int emulate_address_error;
 
 	#define m68ki_set_address_error_trap() \
 		if(setjmp(m68ki_aerr_trap) != 0) \
@@ -569,7 +568,7 @@
 		}
 
 	#define m68ki_check_address_error(ADDR, WRITE_MODE, FC) \
-		if(((ADDR)&1) && emulate_address_error)\
+		if((ADDR)&1) \
 		{ \
 			m68ki_aerr_address = ADDR; \
 			m68ki_aerr_write_mode = WRITE_MODE; \
@@ -2015,10 +2014,10 @@ void m68ki_exception_interrupt(uint int_level)
 	/* Defer cycle counting until later */
 	CPU_INT_CYCLES += CYC_EXCEPTION[vector];
 
-//#if !M68K_EMULATE_INT_ACK
+#if !M68K_EMULATE_INT_ACK
 	/* Automatically clear IRQ if we are not using an acknowledge scheme */
 	CPU_INT_LEVEL = 0;
-//#endif /* M68K_EMULATE_INT_ACK */
+#endif /* M68K_EMULATE_INT_ACK */
 }
 
 

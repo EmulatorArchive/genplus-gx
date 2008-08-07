@@ -2,7 +2,6 @@
 #include "osd.h"
 
 t_option option;
-t_config config;
 
 void do_config(char *file)
 {
@@ -70,9 +69,9 @@ int check_bool(char *token)
 void set_option_defaults(void)
 {
     option.video_driver = GFX_AUTODETECT;
-    option.video_width  = 320;
-    option.video_height = 240;
-    option.video_depth  = 8;
+    option.video_width  = 640;
+    option.video_height = 480;
+    option.video_depth  = 16;
 
     option.remap        = 1;
     option.scanlines    = 0;
@@ -90,38 +89,6 @@ void set_option_defaults(void)
     option.joy_driver   = JOY_TYPE_NONE;
 }
 
-/* additional options */
-void set_config_default()
-{
-  /* sound options */
-  config.psg_preamp   = 1.5;
-  config.fm_preamp    = 1.0;
-  config.boost        = 1;
-  config.hq_fm        = 1;
-  config.fm_core      = 0;
-  config.ssg_enabled  = 0;
-
-  /* system options */
-  config.freeze_auto    = -1;
-  config.sram_auto      = -1;
-  config.region_detect  = 0;
-  config.force_dtack    = 0;
-  config.bios_enabled   = 0;
-
-  /* display options */
-  config.xshift   = 0;
-  config.yshift   = 0;
-  config.xscale   = 320;
-  config.yscale   = 240;
-  config.aspect   = 1;
-  config.overscan = 1;
-  config.render   = 0;
-
-  /* controllers options */
-  config.sys_type[0] = 0;
-  config.sys_type[1] = 0;
-  config.crosshair = 1;
-}
 
 void print_options(void)
 {

@@ -1,3 +1,24 @@
+/****************************************************************************
+ *  Genesis Plus 1.2a
+ *
+ *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ ***************************************************************************/
+
 /*****************************************************************************
  * IPL FONT Engine
  *
@@ -908,7 +929,6 @@ u8 SILENT = 0;
 
 void SetScreen ()
 {
-
   VIDEO_SetNextFramebuffer (xfb[whichfb]);
   VIDEO_Flush ();
   VIDEO_WaitVSync ();
@@ -921,31 +941,21 @@ void ClearScreen ()
   back_framewidth = 440;
 }
 
-void WaitButtonA ()
-{
-  s16 p = ogc_input__getMenuButtons();
-
-  while (p & PAD_BUTTON_A)
-  {
-    VIDEO_WaitVSync();
-    p = ogc_input__getMenuButtons();
-  }
-
-  while (!(p & PAD_BUTTON_A))
-  {
-    VIDEO_WaitVSync();
-    p = ogc_input__getMenuButtons();
-  }
-}
-
 void WaitPrompt (char *msg)
 {
+  int quit = 0;
+
   if (SILENT) return;
-  ClearScreen();
-  WriteCentre(254, msg);
-  WriteCentre(254 + fheight, "Press A to Continue");
-  SetScreen();
-  WaitButtonA ();
+
+  while (PAD_ButtonsDown(0) & PAD_BUTTON_A) {};
+  while (!(PAD_ButtonsDown(0) & PAD_BUTTON_A) && (quit == 0))
+  {
+      ClearScreen();
+      WriteCentre(254, msg);
+      WriteCentre(254 + fheight, "Press A to Continue");
+      SetScreen();
+      while (!(PAD_ButtonsDown(0) & PAD_BUTTON_A));
+  }
 }
 
 void ShowAction (char *msg)
@@ -955,6 +965,12 @@ void ShowAction (char *msg)
   ClearScreen();
   WriteCentre(254, msg);
   SetScreen();
+}
+
+void WaitButtonA ()
+{
+  while (PAD_ButtonsDown(0) & PAD_BUTTON_A) {};
+  while (!(PAD_ButtonsDown(0) & PAD_BUTTON_A));
 }
 
 /****************************************************************************
