@@ -1,94 +1,69 @@
-/***************************************************************************************
- *  Genesis Plus 1.2a
- *  68k memory from VDP handler
- *
- *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- ****************************************************************************************/
+/*
+    memvdp.c --
+    Memory handlers for when the VDP reads the V-bus during DMA.
+*/
 
 #include "shared.h"
 
 unsigned int vdp_dma_r(unsigned int address)
 {
-	int offset = address >> 19;
-
-	switch (m68k_readmap_16[offset])
-	{
-		case ROM:
-			if (svp) address -= 2;
-			return *(uint16 *)(rom_readmap[offset] + (address & 0x7ffff));
-
-		case UMK3_HACK:
-			return *(uint16 *)(&cart_rom[offset << 19] + (address & 0x7ffff));
-
-    	case SVP_DRAM:
-			address -= 2;
-			return *(uint16 *)(svp->dram + (address & 0x1fffe));
-			
-		case SVP_CELL:
-			address -= 2;
-			switch (address >> 16)
+    switch((address >> 21) & 7)
+    {
+        case 0: /* Cartridge ROM */
+        case 1: 
+			/* Backup RAM */
+      		if (sram.on)
 			{
-				case 0x39:
-					address >>= 1;
-					address = (address & 0x7001) | ((address & 0x3e) << 6) | ((address & 0xfc0) >> 5);
-					return ((uint16 *)svp->dram)[address];
-				
-				case 0x3A:
-					address >>= 1;
-					address = (address & 0x7801) | ((address & 0x1e) << 6) | ((address & 0x7e0) >> 4);
-					return ((uint16 *)svp->dram)[address];
-				
-				default:
-					return 0xffff;
+				if (address >= sram.start && address <= sram.end)
+				{
+	   				if (sram.custom) return (EEPROM_Read(address) & 0xffff);
+					return *(uint16 *)(sram.sram + ((address - sram.start) & 0xffff));
+		   		}
 			}
 
-    case SYSTEM_IO:
-      /* Z80 area */
-			/* Return $FFFF only when the Z80 isn't hogging the Z-bus.
-        (e.g. Z80 isn't reset and 68000 has the bus) */
-			if (address <= 0xa0ffff) return (zbusack ? *(uint16 *)(work_ram + (address & 0xffff)) : 0xffff);
+			/* ROM Data */
+			if (address < rom_size) return *(uint16 *)(rom_readmap[address >> 19] + (address & 0x7ffff));
 
+			/* j-CART */
+			if (j_cart && ((address == 0x3FFFFE) || (address == 0x38FFFE)))
+				return (gamepad_read(5) | (gamepad_read(6) << 8));	
+			
+			/* Virtua Racing SVP */
+			if (address == 0x30fe02) return 0x01;
+
+			/* default */
+			return 0x00;	
+
+        case 2: /* Unused */
+        case 3: 
+            return 0xFF00;
+
+        case 4: /* Work RAM */
+        case 6:
+        case 7:
+      		return *(uint16 *)(work_ram + (address & 0xffff));
+
+        case 5: /* Z80 area and I/O chip */
+            /* Z80 area always returns $FFFF */
+            if(address <= 0xA0FFFF)
+            {
+                /* Return $FFFF only when the Z80 isn't hogging the Z-bus.
+                   (e.g. Z80 isn't reset and 68000 has the bus) */
+				return (zbusack == 0) ? 0xFFFF : *(uint16 *)(work_ram + (address & 0xffff));
+			}
+			
 			/* The I/O chip and work RAM try to drive the data bus which
-        results in both values being combined in random ways when read.
-        We return the I/O chip values which seem to have precedence, */
-			if (address <= 0xa1001f)
-      {
-			  int temp = io_read((address >> 1) & 0x0f);
-        return (temp << 8 | temp);
-      }
+               results in both values being combined in random ways when read.
+               We return the I/O chip values which seem to have precedence, */
+			else if (address <= 0xA1001F)
+			{
+                uint8 temp = io_read((address >> 1) & 0x0F);
+                return (temp << 8 | temp);
+            }
+            /* All remaining locations access work RAM */
+			else return *(uint16 *)(work_ram + (address & 0xffff));
+	}
 
-      /* All remaining locations access work RAM */
-			return *(uint16 *)(work_ram + (address & 0xffff));
-
-		case SRAM:
-			if (address <= sram.end) return *(uint16 *)(sram.sram + (address - sram.start));
-			return *(uint16 *)(rom_readmap[address >> 19] + (address & 0x7ffff));
-		
-		case EEPROM:
-			if (address == eeprom.type.sda_out_adr) return eeprom_read(address);
-			return *(uint16 *)(rom_readmap[address >> 19] + (address & 0x7ffff));
-
-		case J_CART:
-			if (address == eeprom.type.sda_out_adr) return eeprom_read(address); /* some games also have EEPROM mapped here */
-			else return jcart_read();
-
-		default:
-			return *(uint16 *)(work_ram + (address & 0xffff));
-  }
+    return -1;
 }
+

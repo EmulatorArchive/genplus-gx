@@ -21,8 +21,7 @@ void error_shutdown(void)
 
 void error(char *format, ...)
 {
-	if (!log_error) return;
-	va_list ap;
+    va_list ap;
     va_start(ap, format);
     if(error_log) vfprintf(error_log, format, ap);
     va_end(ap);

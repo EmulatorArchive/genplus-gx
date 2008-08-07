@@ -68,7 +68,7 @@
 #define MAX_OUT        ((1 << MAX_OUT_BITS) - 1)
 
 //Just for tests stuff...
-//
+
 //#define COEF_MOD       0.5
 //#define MAX_OUT        ((int) (((1 << MAX_OUT_BITS) - 1) * COEF_MOD))
 
@@ -94,56 +94,10 @@
 #define S3             3
 
 
-void YM2612_Timers_Update(int length);
-void YM2612_Special_Update ();
-
-// used for foward...
-void Update_Chan_Algo0(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo1(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo2(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo3(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo4(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo5(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo6(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo7(channel_ *CH, int **buf, int lenght);
-
-void Update_Chan_Algo0_LFO(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo1_LFO(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo2_LFO(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo3_LFO(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo4_LFO(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo5_LFO(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo6_LFO(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo7_LFO(channel_ *CH, int **buf, int lenght);
-
-void Update_Chan_Algo0_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo1_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo2_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo3_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo4_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo5_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo6_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo7_Int(channel_ *CH, int **buf, int lenght);
-
-void Update_Chan_Algo0_LFO_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo1_LFO_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo2_LFO_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo3_LFO_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo4_LFO_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo5_LFO_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo6_LFO_Int(channel_ *CH, int **buf, int lenght);
-void Update_Chan_Algo7_LFO_Int(channel_ *CH, int **buf, int lenght);
-
-// used for foward...
-void Env_Attack_Next(slot_ *SL);
-void Env_Decay_Next(slot_ *SL);
-void Env_Substain_Next(slot_ *SL);
-void Env_Release_Next(slot_ *SL);
-void Env_NULL_Next(slot_ *SL);
-
 /********************************************
  *            Partie variables              *
  ********************************************/
+
 
 struct ym2612__ YM2612;
 
@@ -174,7 +128,7 @@ int LFO_INC_TAB[8];							// LFO step table
 int in0, in1, in2, in3;						// current phase calculation
 int en0, en1, en2, en3;						// current enveloppe calculation
 
-static void (*UPDATE_CHAN[8 * 8])(channel_ *CH, int **buf, int lenght) =		// Update Channel functions pointer table
+const void (*UPDATE_CHAN[8 * 8])(channel_ *CH, int **buf, int lenght) =		// Update Channel functions pointer table
 {
 	(void *)Update_Chan_Algo0,
 	(void *)Update_Chan_Algo1,
@@ -184,6 +138,7 @@ static void (*UPDATE_CHAN[8 * 8])(channel_ *CH, int **buf, int lenght) =		// Upd
 	(void *)Update_Chan_Algo5,
 	(void *)Update_Chan_Algo6,
 	(void *)Update_Chan_Algo7,
+	
 	(void *)Update_Chan_Algo0_LFO,
 	(void *)Update_Chan_Algo1_LFO,
 	(void *)Update_Chan_Algo2_LFO,
@@ -192,6 +147,7 @@ static void (*UPDATE_CHAN[8 * 8])(channel_ *CH, int **buf, int lenght) =		// Upd
 	(void *)Update_Chan_Algo5_LFO,
 	(void *)Update_Chan_Algo6_LFO,
 	(void *)Update_Chan_Algo7_LFO,
+	
 	(void *)Update_Chan_Algo0_Int,
 	(void *)Update_Chan_Algo1_Int,
 	(void *)Update_Chan_Algo2_Int,
@@ -200,6 +156,7 @@ static void (*UPDATE_CHAN[8 * 8])(channel_ *CH, int **buf, int lenght) =		// Upd
 	(void *)Update_Chan_Algo5_Int,
 	(void *)Update_Chan_Algo6_Int,
 	(void *)Update_Chan_Algo7_Int,
+	
 	(void *)Update_Chan_Algo0_LFO_Int,
 	(void *)Update_Chan_Algo1_LFO_Int,
 	(void *)Update_Chan_Algo2_LFO_Int,
@@ -210,7 +167,7 @@ static void (*UPDATE_CHAN[8 * 8])(channel_ *CH, int **buf, int lenght) =		// Upd
 	(void *)Update_Chan_Algo7_LFO_Int
 };
 
-static void (*ENV_NEXT_EVENT[8])(slot_ *SL) =		// Next Enveloppe phase functions pointer table
+const void (*ENV_NEXT_EVENT[8])(slot_ *SL) =		// Next Enveloppe phase functions pointer table
 {
 	(void *)Env_Attack_Next,
 	(void *)Env_Decay_Next,
@@ -269,6 +226,7 @@ int int_cnt;								// Interpolation calculation
 FILE *debug_file = NULL;
 #endif
 
+
 /***********************************************
  *           fonctions calcul param            *
  ***********************************************/
@@ -280,15 +238,7 @@ INLINE void CALC_FINC_SL(slot_ *SL, int finc, int kc)
 	
 	SL->Finc = (finc + SL->DT[kc]) * SL->MUL;
 
-  	/* YM2612 Detune Bug (discovered by Nemesis) */
-  	if (SL->Finc < 0)
-  	{
-    	/* Phase overflow (best result with BLOCK = 5) */
-    	finc = (int)((double)FINC_TAB[0x7FF] / YM2612.Frequence) >> 2;
-    	SL->Finc = (finc + SL->DT[kc]) * SL->MUL; 
-	  }
-  
-  	ksr = kc >> SL->KSR_S;	// keycode atténuation
+	ksr = kc >> SL->KSR_S;	// keycode atténuation
 
 #if YM_DEBUG_LEVEL > 1
 	fprintf(debug_file, "FINC = %d  SL->Finc = %d\n", finc, SL->Finc);
@@ -385,12 +335,6 @@ INLINE void CSM_Key_Control()
 	KEY_ON(&YM2612.CHANNEL[2], 1);
 	KEY_ON(&YM2612.CHANNEL[2], 2);
 	KEY_ON(&YM2612.CHANNEL[2], 3);
-
-  	/* found by Nemesis */
-  	KEY_OFF(&YM2612.CHANNEL[2], 0);
-	KEY_OFF(&YM2612.CHANNEL[2], 1);
-	KEY_OFF(&YM2612.CHANNEL[2], 2);
-	KEY_OFF(&YM2612.CHANNEL[2], 3);
 }
 
 
@@ -414,7 +358,7 @@ int SLOT_SET(int Adr, unsigned char data)
 			if ((SL->MUL = (data & 0x0F))) SL->MUL <<= 1;
 			else SL->MUL = 1;
 
-			SL->DT = (int *)DT_TAB[(data >> 4) & 7];
+			SL->DT = DT_TAB[(data >> 4) & 7];
 
 			CH->SLOT[0].Finc = -1;
 
@@ -445,8 +389,8 @@ int SLOT_SET(int Adr, unsigned char data)
 
 			CH->SLOT[0].Finc = -1;
 
-			if (data &= 0x1F) SL->AR = (int *)&AR_TAB[data << 1];
-			else SL->AR = (int *)&NULL_RATE[0];
+			if (data &= 0x1F) SL->AR = &AR_TAB[data << 1];
+			else SL->AR = &NULL_RATE[0];
 
 			SL->EincA = SL->AR[SL->KSR];
 			if (SL->Ecurp == ATTACK) SL->Einc = SL->EincA;
@@ -460,8 +404,8 @@ int SLOT_SET(int Adr, unsigned char data)
 			if ((SL->AMSon = (data & 0x80))) SL->AMS = CH->AMS;
 			else SL->AMS = 31;
 
-			if (data &= 0x1F) SL->DR = (int *)&DR_TAB[data << 1];
-			else SL->DR = (int *)&NULL_RATE[0];
+			if (data &= 0x1F) SL->DR = &DR_TAB[data << 1];
+			else SL->DR = &NULL_RATE[0];
 
 			SL->EincD = SL->DR[SL->KSR];
 			if (SL->Ecurp == DECAY) SL->Einc = SL->EincD;
@@ -472,8 +416,8 @@ int SLOT_SET(int Adr, unsigned char data)
 			break;
 
 		case 0x70:
-			if (data &= 0x1F) SL->SR = (int *)&DR_TAB[data << 1];
-			else SL->SR = (int *)&NULL_RATE[0];
+			if (data &= 0x1F) SL->SR = &DR_TAB[data << 1];
+			else SL->SR = &NULL_RATE[0];
 
 			SL->EincS = SL->SR[SL->KSR];
 			if ((SL->Ecurp == SUBSTAIN) && (SL->Ecnt < ENV_END)) SL->Einc = SL->EincS;
@@ -486,7 +430,7 @@ int SLOT_SET(int Adr, unsigned char data)
 		case 0x80:
 			SL->SLL = SL_TAB[data >> 4];
 
-			SL->RR = (int *)&DR_TAB[((data & 0xF) << 2) + 2];
+			SL->RR = &DR_TAB[((data & 0xF) << 2) + 2];
 
 			SL->EincR = SL->RR[SL->KSR];
 			if ((SL->Ecurp == RELEASE) && (SL->Ecnt < ENV_END)) SL->Einc = SL->EincR;
@@ -524,7 +468,7 @@ int SLOT_SET(int Adr, unsigned char data)
 			// Al = Altern
 			// H  = Hold
 */
-			if (config.ssg_enabled)
+			if (ssg_enabled)
 			{
 			   if (data & 0x08) SL->SEG = data & 0x0F;
 			   else SL->SEG = 0;
@@ -575,7 +519,7 @@ int CHANNEL_SET(int Adr, unsigned char data)
 			CH->FOCT[0] = (data & 0x38) >> 3;
 			CH->KC[0] = (CH->FOCT[0] << 2) | FKEY_TAB[CH->FNUM[0] >> 7];
 
-			//CH->SLOT[0].Finc = -1;
+			CH->SLOT[0].Finc = -1;
 
 #if YM_DEBUG_LEVEL > 1
 			fprintf(debug_file, "CHANNEL[%d] part2 FNUM = %d  FOCT = %d  KC = %d\n", num, CH->FNUM[0], CH->FOCT[0], CH->KC[0]);
@@ -611,7 +555,7 @@ int CHANNEL_SET(int Adr, unsigned char data)
 				YM2612.CHANNEL[2].FOCT[num] = (data & 0x38) >> 3;
 				YM2612.CHANNEL[2].KC[num] = (YM2612.CHANNEL[2].FOCT[num] << 2) | FKEY_TAB[YM2612.CHANNEL[2].FNUM[num] >> 7];
 
-				//YM2612.CHANNEL[2].SLOT[0].Finc = -1;
+				YM2612.CHANNEL[2].SLOT[0].Finc = -1;
 
 #if YM_DEBUG_LEVEL > 1
 				fprintf(debug_file, "CHANNEL[2] part2 FNUM[%d] = %d  FOCT[%d] = %d  KC[%d] = %d\n", num, YM2612.CHANNEL[2].FNUM[num], num, YM2612.CHANNEL[2].FOCT[num], num, YM2612.CHANNEL[2].KC[num]);
@@ -711,29 +655,41 @@ int YM_SET(int Adr, unsigned char data)
 
 		case 0x24:
 			YM2612.TimerA = (YM2612.TimerA & 0x003) | (((int) data) << 2);
-      		YM2612.TimerAL = (1024 - YM2612.TimerA) << 12;
+
+			if (YM2612.TimerAL != (1024 - YM2612.TimerA) << 12)
+			{
+				YM2612.TimerAcnt = YM2612.TimerAL = (1024 - YM2612.TimerA) << 12;
 
 #if YM_DEBUG_LEVEL > 1
-      		fprintf(debug_file, "Timer A Set = %.8X\n", YM2612.TimerAL);
+				fprintf(debug_file, "Timer A Set = %.8X\n", YM2612.TimerAcnt);
 #endif
+			}
 			break;
 
 		case 0x25:
 			YM2612.TimerA = (YM2612.TimerA & 0x3fc) | (data & 3);
-      		YM2612.TimerAL = (1024 - YM2612.TimerA) << 12;
+
+			if (YM2612.TimerAL != (1024 - YM2612.TimerA) << 12)
+			{
+				YM2612.TimerAcnt = YM2612.TimerAL = (1024 - YM2612.TimerA) << 12;
 
 #if YM_DEBUG_LEVEL > 1
-      		fprintf(debug_file, "Timer A Set = %.8X\n", YM2612.TimerAL);
+				fprintf(debug_file, "Timer A Set = %.8X\n", YM2612.TimerAcnt);
 #endif
+			}
 			break;
 
 		case 0x26:
 			YM2612.TimerB = data;
-      		YM2612.TimerBL = (256 - YM2612.TimerB) << (4 + 12);
+
+			if (YM2612.TimerBL != (256 - YM2612.TimerB) << (4 + 12))
+			{
+				YM2612.TimerBcnt = YM2612.TimerBL = (256 - YM2612.TimerB) << (4 + 12);
 
 #if YM_DEBUG_LEVEL > 1
-      		fprintf(debug_file, "Timer B Set = %.8X\n", YM2612.TimerBL);
+				fprintf(debug_file, "Timer B Set = %.8X\n", YM2612.TimerBcnt);
 #endif
+			}
 			break;
 
 		case 0x27:
@@ -747,7 +703,7 @@ int YM_SET(int Adr, unsigned char data)
 			// b1 = load b
 			// b0 = load a
 
-			if ((data ^ YM2612.Mode) & 0xC0)
+			if ((data ^ YM2612.Mode) & 0x40)
 			{
 				// We changed the channel 2 mode, so recalculate phase step
 				// This fix the punch sound in Street of Rage 2
@@ -757,10 +713,11 @@ int YM_SET(int Adr, unsigned char data)
 				YM2612.CHANNEL[2].SLOT[0].Finc = -1;		// recalculate phase step
 			}
 
-			if ((data & 2) && !(YM2612.Mode & 2)) YM2612.TimerBcnt = YM2612.TimerBL;
-			if ((data & 1) && !(YM2612.Mode & 1)) YM2612.TimerAcnt = YM2612.TimerAL;
+//			if ((data & 2) && (YM2612.Status & 2)) YM2612.TimerBcnt = YM2612.TimerBL;
+//			if ((data & 1) && (YM2612.Status & 1)) YM2612.TimerAcnt = YM2612.TimerAL;
 
-			YM2612.Status &= (~data >> 4)/* & (data >> 2)*/;	// Reset Status
+//			YM2612.Status &= (~data >> 4);					// Reset du Status au cas ou c'est demandé
+			YM2612.Status &= (~data >> 4) & (data >> 2);	// Reset Status
 
 			YM2612.Mode = data;
 
@@ -841,7 +798,7 @@ void Env_Decay_Next(slot_ *SL)
 
 void Env_Substain_Next(slot_ *SL)
 {
-  if (config.ssg_enabled)
+  if (ssg_enabled)
   {
 	if (SL->SEG & 8)	// SSG envelope type
 	{
@@ -854,8 +811,10 @@ void Env_Substain_Next(slot_ *SL)
 		else
 		{
 			// re KEY ON
+
 			// SL->Fcnt = 0;
 			// SL->ChgEnM = 0xFFFFFFFF;
+
 			SL->Ecnt = 0;
 			SL->Einc = SL->EincA;
 			SL->Ecmp = ENV_DECAY;
@@ -1864,7 +1823,7 @@ void Update_Chan_Algo7_LFO_Int(channel_ *CH, int **buf, int lenght)
  *            fonctions publiques              *
  ***********************************************/
 
-static long dac_highpass;
+//static long dac_highpass;
 
 // Initialisation de l'émulateur YM2612
 int YM2612_Init(int Clock, int Rate, int Interpolation)
@@ -2137,7 +2096,7 @@ int YM2612_Reset(void)
 	YM2612.TimerBcnt = 0;
 	YM2612.DAC = 0;
 	YM2612.DACdata = 0;
-	dac_highpass = 0;
+//	dac_highpass = 0;
 
 	YM2612.Status = 0;
 
@@ -2226,7 +2185,7 @@ int YM2612_Write(unsigned char adr, unsigned char data)
 {
 	int d;
 	
-	//data &= 0xFF;
+	data &= 0xFF;
     adr  &= 0x03;
 	
 	switch(adr)
@@ -2240,7 +2199,6 @@ int YM2612_Write(unsigned char adr, unsigned char data)
 			if (YM2612.OPNAadr == 0x2A)
 			{
 				YM2612.DACdata = ((int) data - 0x80) << 7;
-				YM2612.REG[0][0x2A] = data;
 				return 0;
 			}
 
@@ -2310,15 +2268,7 @@ void YM2612_Update(int **buf, int length)
 	if (YM2612.CHANNEL[1].SLOT[0].Finc == -1) CALC_FINC_CH(&YM2612.CHANNEL[1]);
 	if (YM2612.CHANNEL[2].SLOT[0].Finc == -1)
 	{
-		/*----------------------
-	      |Mode| Behaviour     |
-	      |----|---------------|
-	      | 00 | Normal        |
-	      | 01 | Special       |
-	      | 10 | Special + CSM |
-	      | 11 | Special       |
-      	---------------------- */
-    	if (YM2612.Mode & 0xC0)
+		if (YM2612.Mode & 0x40)
 		{
 			CALC_FINC_SL(&(YM2612.CHANNEL[2].SLOT[S0]), FINC_TAB[YM2612.CHANNEL[2].FNUM[2]] >> (7 - YM2612.CHANNEL[2].FOCT[2]), YM2612.CHANNEL[2].KC[2]);
 			CALC_FINC_SL(&(YM2612.CHANNEL[2].SLOT[S1]), FINC_TAB[YM2612.CHANNEL[2].FNUM[3]] >> (7 - YM2612.CHANNEL[2].FOCT[3]), YM2612.CHANNEL[2].KC[3]);
@@ -2381,8 +2331,8 @@ void YM2612_Update(int **buf, int length)
 	UPDATE_CHAN[YM2612.CHANNEL[3].ALGO + algo_type](&(YM2612.CHANNEL[3]), buf, length);
 	UPDATE_CHAN[YM2612.CHANNEL[4].ALGO + algo_type](&(YM2612.CHANNEL[4]), buf, length);
 	if (!(YM2612.DAC)) UPDATE_CHAN[YM2612.CHANNEL[5].ALGO + algo_type](&(YM2612.CHANNEL[5]), buf, length);
-	else 
-	{
+/*
+    else	{
 		for(i = 0; i < length; i++)
 		{
 			long dac = (YM2612.DACdata << 15) - dac_highpass;
@@ -2392,11 +2342,14 @@ void YM2612_Update(int **buf, int length)
 			buf[1][i] += dac & YM2612.CHANNEL[5].RIGHT;
 		}
 	}
+*/
 
 	YM2612.Inter_Cnt = int_cnt;
 
 	/* update timers here */
+	/*
 	YM2612_Timers_Update(length);
+	*/
 
 #if YM_DEBUG_LEVEL > 1
 	fprintf(debug_file, "\n\nFinishing generating sound...\n\n");
@@ -2404,32 +2357,41 @@ void YM2612_Update(int **buf, int length)
 
 }
 
-void YM2612_Timers_Update(int length)
+/* Gens */
+
+void YM2612_DacAndTimers_Update(int **buffer, int length)
 {
+  int *bufL, *bufR;
 	int i;
+
+  if(YM2612.DAC && YM2612.DACdata)
+  {
+    bufL = buffer[0];
+    bufR = buffer[1];
+
+    for(i = 0; i < length; i++)
+    {
+      bufL[i] += YM2612.DACdata & YM2612.CHANNEL[5].LEFT;
+      bufR[i] += YM2612.DACdata & YM2612.CHANNEL[5].RIGHT;
+    }
+  }
 
 	i = YM2612.TimerBase * length;
 
 	if (YM2612.Mode & 1)	// Timer A ON ?
 	{
+//    if((YM2612.TimerAcnt -= 14073) <= 0)    // 13879=NTSC (old: 14475=NTSC  14586=PAL)
 		if ((YM2612.TimerAcnt -= i) <= 0)
 		{
 			YM2612.Status |= (YM2612.Mode & 0x04) >> 2;
 			YM2612.TimerAcnt += YM2612.TimerAL;
-	      	/*----------------------
-		      |Mode| Behaviour     |
-		      |----|---------------|
-		      | 00 | Normal        |
-		      | 01 | Special       |
-		      | 10 | Special + CSM |
-		      | 11 | Special       |
-		      ---------------------- */
-	      	if ((YM2612.Mode & 0xC0) == 0x80) CSM_Key_Control(); // found by Nemesis
+			if (YM2612.Mode & 0x80) CSM_Key_Control();
 		}
 	}
 
 	if (YM2612.Mode & 2)	// Timer B ON ?
 	{
+//    if((YM2612.TimerBcnt -= 14073) <= 0)    // 13879=NTSC (old: 14475=NTSC  14586=PAL)
 		if ((YM2612.TimerBcnt -= i) <= 0)
 		{
 			YM2612.Status |= (YM2612.Mode & 0x08) >> 2;
@@ -2438,5 +2400,18 @@ void YM2612_Timers_Update(int length)
 	}
 }
 
-void YM2612_Special_Update ()
-{}
+/* Gens */
+
+void YM2612_Special_Update(void)
+{
+  if((snd.fm.curStage - snd.fm.lastStage) > 0)
+  {
+ 	int *tempBuffer[2];       
+	tempBuffer[0] = snd.fm.buffer[0] + snd.fm.lastStage;
+	tempBuffer[1] = snd.fm.buffer[1] + snd.fm.lastStage;
+	YM2612_Update(tempBuffer, snd.fm.curStage - snd.fm.lastStage);
+    snd.fm.lastStage = snd.fm.curStage;
+  }
+}
+
+/* end */

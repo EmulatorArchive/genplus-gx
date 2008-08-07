@@ -9,7 +9,6 @@
 #include "macros.h"
 #include "m68k.h"
 #include "z80.h"
-#include "system.h"
 #include "genesis.h"
 #include "vdp.h"
 #include "render.h"
@@ -17,19 +16,26 @@
 #include "memz80.h"
 #include "membnk.h"
 #include "memvdp.h"
+#include "system.h"
+#ifndef NGC
+#include "unzip.h"
+#include "fileio.h"
+#include "loadrom.h"
+#endif
 #include "io.h"
 #include "input.h"
-#include "state.h"
 #include "sound.h"
-#include "sn76489.h"
 #include "fm.h"
-#include "ym2612.h"
-#include "loadrom.h"
-#include "cart_hw.h"
-#include "eeprom.h"
-#include "sram.h"
-#include "svp.h"
+#include "sn76496.h"
 #include "osd.h"
+#include "state.h"
+#include "sram.h"
+#include "eeprom.h"
+#include "sn76489.h"
+#include "ym2612.h"
+
+extern uint8 FM_GENS;
+extern uint8 PSG_MAME;
 
 #endif /* _SHARED_H_ */
 
