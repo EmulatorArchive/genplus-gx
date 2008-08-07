@@ -508,7 +508,6 @@ static void default_instr_hook_callback(unsigned int pc)
 #if M68K_EMULATE_ADDRESS_ERROR
 	#include <setjmp.h>
 	jmp_buf m68ki_aerr_trap;
-  	int emulate_address_error = 0;
 #endif /* M68K_EMULATE_ADDRESS_ERROR */
 
 

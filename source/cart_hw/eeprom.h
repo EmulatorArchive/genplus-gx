@@ -1,8 +1,7 @@
 /****************************************************************************
- *  Genesis Plus 1.2a
- *  Serial EEPROM support
+ *  Serial EEPROM support for Sega Genesis games
  *
- *  code by Eke-Eke, GC/Wii port
+ *  Copyright (C) 2007 EkeEKe
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,7 +17,6 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ***************************************************************************/
-
 #ifndef _EEPROM_H_
 #define _EEPROM_H_
 
@@ -86,7 +84,7 @@ extern T_EEPROM eeprom;
 
 /* Function prototypes */
 extern void eeprom_init();
-extern void eeprom_write(uint32 address, uint32 value, uint32 word_access);
-extern uint32 eeprom_read(uint32 address, uint32 word_access);
+extern void eeprom_write(unsigned int address, unsigned int value);
+extern unsigned int eeprom_read(unsigned int address);
 
 #endif

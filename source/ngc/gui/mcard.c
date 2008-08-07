@@ -1,75 +1,81 @@
-/***************************************************************************
- *   SDCARD/MEMCARD File support
+/****************************************************************************
+ *  Genesis Plus 1.2a
  *
+ *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
  *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ***************************************************************************/
 #include "shared.h"
 #include "dvd.h"
 #include "font.h"
 #include "saveicon.h"	/*** Nice little icon - thanks brakken! ***/
 
-#include <fat.h>
-#include <sys/dir.h>
-
 /* Support for MemCards  */
 /**
  * libOGC System Work Area
  */
 static u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
-static card_dir CardDir;
-static card_file CardFile;
-static card_stat CardStatus;
 
 /**
  * DMA Transfer Area.
  * Must be 32-byte aligned.
  * 64k SRAM + 2k Icon
  */
-static u8 savebuffer[0x26000] ATTRIBUTE_ALIGN (32);
+unsigned char savebuffer[0x24000] ATTRIBUTE_ALIGN (32);
 
-int ManageSRAM (u8 direction, u8 device);
-int ManageState (u8 direction, u8 device);
+card_dir CardDir;
+card_file CardFile;
+card_stat CardStatus;
+extern int CARDSLOT;
+extern int use_SDCARD;
+
+int ManageSRAM (int direction);
+int ManageState (int direction);
 
 /****************************************************************************
- * FILE autoload (SRAM/FreezeState or Config File)
+ * SRAM autoload
  *
+ * the detection order is the following:
+ *		MCARD (SLOTA) > MCARD (SLOTB) > SDCARD (SLOTA) > SDCARD (SLOTB)
  *
  *****************************************************************************/
-void memfile_autoload()
+extern u8 SILENT;
+
+void sram_autoload()
 {
-	/* this should be transparent to the user */
-  SILENT = 1; 
+	int ret = 0;
+	int i = 0;
+	int old_cardslot = CARDSLOT;
+	int old_sdcard = use_SDCARD;
 
-  /* SRAM */
-  if (config.sram_auto != -1)
-    ManageSRAM(1,config.sram_auto);
-
-  /* STATE */
-  if (config.freeze_auto != -1)
-    ManageState(1,config.freeze_auto);
-
+	SILENT = 1; /* this should be transparent to the user */
+	while ((i < 4) && (!ret))
+	{
+		use_SDCARD = (i&2) ? 1 : 0;
+		CARDSLOT   = (i&1) ? CARD_SLOTB : CARD_SLOTA;
+		ret = ManageSRAM(1);
+		i++;
+	}
+	if (!ret)
+	{
+		/* restore old settings if not found */
+		CARDSLOT = old_cardslot; 
+		use_SDCARD = old_sdcard;
+	}
 	SILENT = 0;
 }
-
-void memfile_autosave()
-{
-  int crccheck = crc32 (0, sram.sram, 0x10000);
-
-  /* this should be transparent to the user */
-  SILENT = 1;
-  
-  /* SRAM */
-  if ((config.sram_auto != -1) && (crccheck != sram.crc))
-    ManageSRAM(0, config.sram_auto);
-
-  /* STATE */
-  if (config.freeze_auto != -1)
-    ManageState(0,config.freeze_auto);
-
-  SILENT = 0;
-  return;
-}
-
 
 /****************************************************************************
  * SDCARD Access functions
@@ -77,87 +83,78 @@ void memfile_autosave()
  * We use the same buffer as for Memory Card manager
  * Function returns TRUE on success.
  *****************************************************************************/
-static int SD_ManageFile(char *filename, int direction, int filetype)
+int SD_ManageFile(char *filename, int direction, int filetype)
 {
-  char pathname[MAXPATHLEN];
-  int done = 0;
-  int filesize;
-  unsigned long inbytes,outbytes;
+    char name[1024];
+	sd_file *handle;
+    int len = 0;
+    int offset = 0;
+	int filesize;
+	unsigned long inbytes,outbytes;
 
-  /* first check if directory exist */
-  DIR_ITER *dir = diropen("/genplus/saves");
-  if (dir == NULL) mkdir("/genplus/saves",S_IRWXU);
-  else dirclose(dir);
+    SDCARD_Init ();
+	
+	/* build complete SDCARD filename */
+	sprintf (name, "dev%d:\\genplus\\save\\%s", CARDSLOT, filename);
 
-  /* build complete SDCARD filename */
-  sprintf (pathname, "/genplus/saves/%s", filename);
+	/* open file */
+	handle = direction ? SDCARD_OpenFile (name, "rb") :
+						 SDCARD_OpenFile (name, "w");
 
-  /* open file */
-  FILE *fp = fopen(pathname, direction ? "rb" : "wb");
-  if (fp == NULL)
-  {
-    sprintf (filename, "Error opening %s", pathname);
-    WaitPrompt(filename);
-    return 0;
-  }
-
+	if (handle == NULL)
+	{
+		sprintf (filename, "Error opening %s", name);
+		WaitPrompt(filename);
+		return 0;
+	}
+	
 	switch (direction)
 	{
 		case 0: /* SAVING */
 
 			if (filetype) /* SRAM */
 			{
-				inbytes  = 0x10000;
-				outbytes = 0x24000;
-				compress2 ((Bytef *)(savebuffer + 4), &outbytes, (Bytef *)(sram.sram), inbytes, 9);
-				memcpy(savebuffer, &outbytes, 4);
-				filesize = outbytes + 4;
-				sram.crc = crc32 (0, sram.sram, 0x10000);
+				inbytes = 0x10000;
+				outbytes = 0x12000;
+				compress2 ((Bytef *) &savebuffer[sizeof(outbytes)], &outbytes, (Bytef *) &sram.sram, inbytes, 9);
+				memcpy(&savebuffer[0], &outbytes, sizeof(outbytes));
+				filesize = outbytes + sizeof(outbytes);
+				sram.crc = crc32 (0, &sram.sram[0], 0x10000);
 			}
-			else filesize = state_save(savebuffer); /* STATE */
+			else filesize = state_save(&savebuffer[0]); /* STATE */
 
-      /* write buffer */
-      done = fwrite(savebuffer, 1, filesize, fp);
-      if (done < filesize)
-      {
-        sprintf (filename, "Error writing %s", pathname);
-        WaitPrompt(filename);
-        return 0;
-      }
+			len = SDCARD_WriteFile (handle, savebuffer, filesize);
+			SDCARD_CloseFile (handle);
 
-      fclose(fp);
-      sprintf (filename, "Saved %d bytes successfully", done);
-      WaitPrompt (filename);
-      return 1;
+			if (len != filesize)
+			{
+				sprintf (filename, "Error writing %s", name);
+				WaitPrompt (filename);
+				return 0;
+			}
+			
+			sprintf (filename, "Saved %d bytes successfully", filesize);
+			WaitPrompt (filename);
+			return 1;
 		
 		case 1: /* LOADING */
-	
-      /* read size */
-      fseek(fp , 0 , SEEK_END);
-      filesize = ftell (fp);
-      fseek(fp, 0, SEEK_SET);
-
-      /* read into buffer (32k blocks) */
-      done = fread(savebuffer, 1, filesize, fp);
-      if (done < filesize)
-      {
-        sprintf (filename, "Error reading %s", pathname);
-        WaitPrompt(filename);
-        return 0;
-      }
-      fclose(fp);
+		
+			len = 0;
+			offset = 0;
+			while ((len = SDCARD_ReadFile (handle, savebuffer + offset , 2048)) > 0) offset += len;
+			SDCARD_CloseFile (handle);
 
 			if (filetype) /* SRAM */
 			{
-				memcpy(&inbytes, savebuffer, 4);
+				memcpy(&inbytes,&savebuffer[0],sizeof(inbytes));
 				outbytes = 0x10000;
-				uncompress ((Bytef *)(sram.sram), &outbytes, (Bytef *)(savebuffer + 4), inbytes);
-				sram.crc = crc32 (0, sram.sram, 0x10000);
+				uncompress ((Bytef *) &sram.sram, &outbytes, (Bytef *) &savebuffer[sizeof(inbytes)], inbytes);
+				sram.crc = crc32 (0, &sram.sram[0], 0x10000);
 				system_reset ();
 			}
-			else state_load(savebuffer); /* STATE */
+			else state_load(&savebuffer[0]); /* STATE */
             
-			sprintf (filename, "Loaded %d bytes successfully", done);
+			sprintf (filename, "Loaded %d bytes successfully", offset);
 			WaitPrompt (filename);
 			return 1;
 	}
@@ -174,18 +171,16 @@ static int SD_ManageFile(char *filename, int direction, int filetype)
  *
  * Function returns TRUE on success.
  *****************************************************************************/
-int MountTheCard (u8 slot)
+int MountTheCard ()
 {
 	int tries = 0;
 	int CardError;
-	*(unsigned long *) (0xcc006800) |= 1 << 13; /*** Disable Encryption ***/
-#ifndef HW_RVL
-	uselessinquiry ();
-#endif
-  while (tries < 10)
-  {
-    VIDEO_WaitVSync ();
-		CardError = CARD_Mount (slot, SysArea, NULL); /*** Don't need or want a callback ***/
+	while (tries < 10)
+	{
+		*(unsigned long *) (0xcc006800) |= 1 << 13; /*** Disable Encryption ***/
+		uselessinquiry ();
+		VIDEO_WaitVSync ();
+		CardError = CARD_Mount (CARDSLOT, SysArea, NULL); /*** Don't need or want a callback ***/
 		if (CardError == 0) return 1;
 		else EXI_ProbeReset ();
 		tries++;
@@ -199,9 +194,9 @@ int MountTheCard (u8 slot)
  * Wrapper to search through the files on the card.
  * Returns TRUE if found.
  ****************************************************************************/
-int CardFileExists (char *filename, u8 slot)
+int CardFileExists (char *filename)
 {
-	int CardError = CARD_FindFirst (slot, &CardDir, TRUE);
+	int CardError = CARD_FindFirst (CARDSLOT, &CardDir, TRUE);
 	while (CardError != CARD_ERROR_NOFILE)
 	{
 		CardError = CARD_FindNext (&CardDir);
@@ -221,7 +216,7 @@ int CardFileExists (char *filename, u8 slot)
  *
  * direction == 0 save, 1 load.
  ****************************************************************************/
-int ManageSRAM (u8 direction, u8 device)
+int ManageSRAM (int direction)
 {
 	char filename[128];
 	char action[80];
@@ -229,27 +224,33 @@ int ManageSRAM (u8 direction, u8 device)
 	unsigned int SectorSize;
 	int blocks;
 	char comment[2][32] = { {"Genesis Plus 1.2a"}, {"SRAM Save"} };
-  int outbytes = 0;
+    int outbytes = 0;
 	int sbo;
+	//int i;
 	unsigned long inzipped,outzipped;
 
 	if (!genromsize) return 0;
 
-	/* clean buffer */
-  memset(savebuffer, 0, 0x24000);
-
 	if (direction) ShowAction ("Loading SRAM ...");
 	else ShowAction ("Saving SRAM ...");
 
-	/* First, build a filename */
-	sprintf (filename, "MD-%04X.srm", realchecksum);
+	/* First, build a filename based on the information retrieved for this ROM */
+	if (strlen (rominfo.international)) sprintf (filename, "%02X-%s", rominfo.checksum, rominfo.international);
+	else sprintf (filename, "%02X-%s", rominfo.checksum, rominfo.domestic);
+
+	/* As these names tend to be bulked with spaces, let's strip them */
+	/* Name should be in 16 character blocks, so take first 16        */
+	filename[12] = 0;
+	sprintf (filename,"%s.srm", filename);
+	/*for (i = strlen (filename) - 1; i > 0; i--)
+		if (filename[i] != 32) break;
+	filename[i + 1] = 0;*/
+
+	/* Now add the 16bit checksum, to ensure it's the same ROM */
 	strcpy (comment[1], filename);
 
 	/* device is SDCARD, let's go */
-	if (device == 0) return SD_ManageFile(filename,direction,1);
-  
-  /* set MCARD slot nr. */
-  u8 CARDSLOT = device - 1;
+	if (use_SDCARD) return SD_ManageFile(filename,direction,1);
 
 	/* device is MCARD, we continue */
 	if (direction == 0) /*** Saving ***/
@@ -271,7 +272,7 @@ int ManageSRAM (u8 direction, u8 device)
 	CARD_Init ("GENP", "00");
 
 	/*** Attempt to mount the card ***/
-	CardError = MountTheCard (CARDSLOT);
+	CardError = MountTheCard ();
 
 	if (CardError)
 	{
@@ -286,7 +287,7 @@ int ManageSRAM (u8 direction, u8 device)
 				if (outbytes % SectorSize)  blocks += SectorSize;
 
 				/*** Check if a previous save exists ***/
-				if (CardFileExists (filename,CARDSLOT))
+				if (CardFileExists (filename))
 				{
 					CardError = CARD_Open (CARDSLOT, filename, &CardFile);
 					if (CardError)
@@ -303,7 +304,7 @@ int ManageSRAM (u8 direction, u8 device)
 					if (size < blocks)
 					{
 						/* new size is bigger: check if there is enough space left */
-					  CardError = CARD_Create (CARDSLOT, "TEMP", blocks-size, &CardFile);
+					    CardError = CARD_Create (CARDSLOT, "TEMP", blocks-size, &CardFile);
 						if (CardError)
 						{
 							sprintf (action, "Error Update : %d", CardError);
@@ -354,7 +355,7 @@ int ManageSRAM (u8 direction, u8 device)
 				return 1;
 
 			default: /*** Loading ***/
-				if (!CardFileExists (filename,CARDSLOT))
+				if (!CardFileExists (filename))
 				{
 					WaitPrompt ("No SRAM File Found");
 					CARD_Unmount (CARDSLOT);
@@ -405,14 +406,14 @@ int ManageSRAM (u8 direction, u8 device)
 }
 
 /****************************************************************************
- * ManageState
+ * ManageSTATE
  *
  * Here is the main Freeze File Management stuff.
  * The output file contains an icon (2K), 64 bytes comment and the STATE (~128k)
  *
  * direction == 0 save, 1 load.
  ****************************************************************************/
-int ManageState (u8 direction, u8 device)
+int ManageState (int direction)
 {
 	char filename[128];
 	char action[80];
@@ -420,27 +421,32 @@ int ManageState (u8 direction, u8 device)
 	unsigned int SectorSize;
 	int blocks;
 	char comment[2][32] = { {"Genesis Plus 1.2a [FRZ]"}, {"Freeze State"} };
-	int outbytes = 0;
+	int outbytes;
 	int sbo;
+	//int i;
 	int state_size = 0;
 
 	if (!genromsize) return 0;
 
-	/* clean buffer */
-	memset(savebuffer, 0, 0x24000);
-
-  if (direction) ShowAction ("Loading State ...");
+	if (direction) ShowAction ("Loading State ...");
 	else ShowAction ("Saving State ...");
 
-	/* First, build a filename */
-	sprintf (filename, "MD-%04X.gpz", realchecksum);
+	/* First, build a filename based on the information retrieved for this ROM */
+	if (strlen (rominfo.international)) sprintf (filename, "%02X-%s", rominfo.checksum, rominfo.international);
+	else sprintf (filename, "%02X-%s", rominfo.checksum, rominfo.domestic);
+
+	/* As these names tend to be bulked with spaces, let's strip them */
+	/* Name should be in 16 character blocks, so take first 16        */
+	filename[12] = 0;
+	sprintf (filename,"%s.gp0", filename);
+	/*for (i = strlen (filename) - 1; i > 0; i--) if (filename[i] != 32) break;
+	filename[i + 1] = 0;*/
+
+	/* Now add the 16bit checksum, to ensure it's the same ROM */
 	strcpy (comment[1], filename);
 
 	/* device is SDCARD, let's go */
-	if (device == 0) return SD_ManageFile(filename,direction,0);
-  
-  /* set MCARD slot nr. */
-  u8 CARDSLOT = device - 1;
+	if (use_SDCARD) return SD_ManageFile(filename,direction,0);
 
 	/* device is MCARD, we continue */
 	if (direction == 0) /* Saving */
@@ -458,7 +464,7 @@ int ManageState (u8 direction, u8 device)
 	CARD_Init ("GENP", "00");
 
 	/*** Attempt to mount the card ***/
-	CardError = MountTheCard (CARDSLOT);
+	CardError = MountTheCard ();
 
 	if (CardError)
 	{
@@ -473,7 +479,7 @@ int ManageState (u8 direction, u8 device)
 				if (outbytes % SectorSize) blocks += SectorSize;
 
 				/*** Check if a previous save exists ***/
-				if (CardFileExists (filename, CARDSLOT))
+				if (CardFileExists (filename))
 				{
 					CardError = CARD_Open (CARDSLOT, filename, &CardFile);
 					if (CardError)
@@ -490,7 +496,7 @@ int ManageState (u8 direction, u8 device)
 					if (size < blocks)
 					{
 						/* new size is bigger: check if there is enough space left */
-					  CardError = CARD_Create (CARDSLOT, "TEMP", blocks-size, &CardFile);
+					    CardError = CARD_Create (CARDSLOT, "TEMP", blocks-size, &CardFile);
 						if (CardError)
 						{
 							sprintf (action, "Error Update : %d", CardError);
@@ -540,7 +546,7 @@ int ManageState (u8 direction, u8 device)
 				return 1;
 
 			default: /*** Loading ***/
-				if (!CardFileExists (filename, CARDSLOT))
+				if (!CardFileExists (filename))
 				{
 					WaitPrompt ("No Savestate Found");
 					CARD_Unmount (CARDSLOT);
@@ -573,8 +579,7 @@ int ManageState (u8 direction, u8 device)
 				CARD_Close (&CardFile);
 				CARD_Unmount (CARDSLOT);
 
-				/*** Load State ***/
-			    state_load(&savebuffer[2112]);
+				state_load(&savebuffer[2112]);
 
 				/*** Inform user ***/
 				sprintf (action, "Loaded %d bytes successfully", size);

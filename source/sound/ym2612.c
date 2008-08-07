@@ -269,6 +269,7 @@ int int_cnt;								// Interpolation calculation
 FILE *debug_file = NULL;
 #endif
 
+
 /***********************************************
  *           fonctions calcul param            *
  ***********************************************/
@@ -280,15 +281,7 @@ INLINE void CALC_FINC_SL(slot_ *SL, int finc, int kc)
 	
 	SL->Finc = (finc + SL->DT[kc]) * SL->MUL;
 
-  	/* YM2612 Detune Bug (discovered by Nemesis) */
-  	if (SL->Finc < 0)
-  	{
-    	/* Phase overflow (best result with BLOCK = 5) */
-    	finc = (int)((double)FINC_TAB[0x7FF] / YM2612.Frequence) >> 2;
-    	SL->Finc = (finc + SL->DT[kc]) * SL->MUL; 
-	  }
-  
-  	ksr = kc >> SL->KSR_S;	// keycode atténuation
+	ksr = kc >> SL->KSR_S;	// keycode atténuation
 
 #if YM_DEBUG_LEVEL > 1
 	fprintf(debug_file, "FINC = %d  SL->Finc = %d\n", finc, SL->Finc);
@@ -385,12 +378,6 @@ INLINE void CSM_Key_Control()
 	KEY_ON(&YM2612.CHANNEL[2], 1);
 	KEY_ON(&YM2612.CHANNEL[2], 2);
 	KEY_ON(&YM2612.CHANNEL[2], 3);
-
-  	/* found by Nemesis */
-  	KEY_OFF(&YM2612.CHANNEL[2], 0);
-	KEY_OFF(&YM2612.CHANNEL[2], 1);
-	KEY_OFF(&YM2612.CHANNEL[2], 2);
-	KEY_OFF(&YM2612.CHANNEL[2], 3);
 }
 
 
@@ -524,7 +511,7 @@ int SLOT_SET(int Adr, unsigned char data)
 			// Al = Altern
 			// H  = Hold
 */
-			if (config.ssg_enabled)
+			if (ssg_enabled)
 			{
 			   if (data & 0x08) SL->SEG = data & 0x0F;
 			   else SL->SEG = 0;
@@ -575,7 +562,7 @@ int CHANNEL_SET(int Adr, unsigned char data)
 			CH->FOCT[0] = (data & 0x38) >> 3;
 			CH->KC[0] = (CH->FOCT[0] << 2) | FKEY_TAB[CH->FNUM[0] >> 7];
 
-			//CH->SLOT[0].Finc = -1;
+			CH->SLOT[0].Finc = -1;
 
 #if YM_DEBUG_LEVEL > 1
 			fprintf(debug_file, "CHANNEL[%d] part2 FNUM = %d  FOCT = %d  KC = %d\n", num, CH->FNUM[0], CH->FOCT[0], CH->KC[0]);
@@ -611,7 +598,7 @@ int CHANNEL_SET(int Adr, unsigned char data)
 				YM2612.CHANNEL[2].FOCT[num] = (data & 0x38) >> 3;
 				YM2612.CHANNEL[2].KC[num] = (YM2612.CHANNEL[2].FOCT[num] << 2) | FKEY_TAB[YM2612.CHANNEL[2].FNUM[num] >> 7];
 
-				//YM2612.CHANNEL[2].SLOT[0].Finc = -1;
+				YM2612.CHANNEL[2].SLOT[0].Finc = -1;
 
 #if YM_DEBUG_LEVEL > 1
 				fprintf(debug_file, "CHANNEL[2] part2 FNUM[%d] = %d  FOCT[%d] = %d  KC[%d] = %d\n", num, YM2612.CHANNEL[2].FNUM[num], num, YM2612.CHANNEL[2].FOCT[num], num, YM2612.CHANNEL[2].KC[num]);
@@ -711,29 +698,41 @@ int YM_SET(int Adr, unsigned char data)
 
 		case 0x24:
 			YM2612.TimerA = (YM2612.TimerA & 0x003) | (((int) data) << 2);
-      		YM2612.TimerAL = (1024 - YM2612.TimerA) << 12;
+
+			if (YM2612.TimerAL != (1024 - YM2612.TimerA) << 12)
+			{
+				YM2612.TimerAcnt = YM2612.TimerAL = (1024 - YM2612.TimerA) << 12;
 
 #if YM_DEBUG_LEVEL > 1
-      		fprintf(debug_file, "Timer A Set = %.8X\n", YM2612.TimerAL);
+				fprintf(debug_file, "Timer A Set = %.8X\n", YM2612.TimerAcnt);
 #endif
+			}
 			break;
 
 		case 0x25:
 			YM2612.TimerA = (YM2612.TimerA & 0x3fc) | (data & 3);
-      		YM2612.TimerAL = (1024 - YM2612.TimerA) << 12;
+
+			if (YM2612.TimerAL != (1024 - YM2612.TimerA) << 12)
+			{
+				YM2612.TimerAcnt = YM2612.TimerAL = (1024 - YM2612.TimerA) << 12;
 
 #if YM_DEBUG_LEVEL > 1
-      		fprintf(debug_file, "Timer A Set = %.8X\n", YM2612.TimerAL);
+				fprintf(debug_file, "Timer A Set = %.8X\n", YM2612.TimerAcnt);
 #endif
+			}
 			break;
 
 		case 0x26:
 			YM2612.TimerB = data;
-      		YM2612.TimerBL = (256 - YM2612.TimerB) << (4 + 12);
+
+			if (YM2612.TimerBL != (256 - YM2612.TimerB) << (4 + 12))
+			{
+				YM2612.TimerBcnt = YM2612.TimerBL = (256 - YM2612.TimerB) << (4 + 12);
 
 #if YM_DEBUG_LEVEL > 1
-      		fprintf(debug_file, "Timer B Set = %.8X\n", YM2612.TimerBL);
+				fprintf(debug_file, "Timer B Set = %.8X\n", YM2612.TimerBcnt);
 #endif
+			}
 			break;
 
 		case 0x27:
@@ -747,7 +746,7 @@ int YM_SET(int Adr, unsigned char data)
 			// b1 = load b
 			// b0 = load a
 
-			if ((data ^ YM2612.Mode) & 0xC0)
+			if ((data ^ YM2612.Mode) & 0x40)
 			{
 				// We changed the channel 2 mode, so recalculate phase step
 				// This fix the punch sound in Street of Rage 2
@@ -757,10 +756,11 @@ int YM_SET(int Adr, unsigned char data)
 				YM2612.CHANNEL[2].SLOT[0].Finc = -1;		// recalculate phase step
 			}
 
-			if ((data & 2) && !(YM2612.Mode & 2)) YM2612.TimerBcnt = YM2612.TimerBL;
-			if ((data & 1) && !(YM2612.Mode & 1)) YM2612.TimerAcnt = YM2612.TimerAL;
+//			if ((data & 2) && (YM2612.Status & 2)) YM2612.TimerBcnt = YM2612.TimerBL;
+//			if ((data & 1) && (YM2612.Status & 1)) YM2612.TimerAcnt = YM2612.TimerAL;
 
-			YM2612.Status &= (~data >> 4)/* & (data >> 2)*/;	// Reset Status
+//			YM2612.Status &= (~data >> 4);					// Reset du Status au cas ou c'est demandé
+			YM2612.Status &= (~data >> 4) & (data >> 2);	// Reset Status
 
 			YM2612.Mode = data;
 
@@ -841,7 +841,7 @@ void Env_Decay_Next(slot_ *SL)
 
 void Env_Substain_Next(slot_ *SL)
 {
-  if (config.ssg_enabled)
+  if (ssg_enabled)
   {
 	if (SL->SEG & 8)	// SSG envelope type
 	{
@@ -854,8 +854,10 @@ void Env_Substain_Next(slot_ *SL)
 		else
 		{
 			// re KEY ON
+
 			// SL->Fcnt = 0;
 			// SL->ChgEnM = 0xFFFFFFFF;
+
 			SL->Ecnt = 0;
 			SL->Einc = SL->EincA;
 			SL->Ecmp = ENV_DECAY;
@@ -2310,15 +2312,7 @@ void YM2612_Update(int **buf, int length)
 	if (YM2612.CHANNEL[1].SLOT[0].Finc == -1) CALC_FINC_CH(&YM2612.CHANNEL[1]);
 	if (YM2612.CHANNEL[2].SLOT[0].Finc == -1)
 	{
-		/*----------------------
-	      |Mode| Behaviour     |
-	      |----|---------------|
-	      | 00 | Normal        |
-	      | 01 | Special       |
-	      | 10 | Special + CSM |
-	      | 11 | Special       |
-      	---------------------- */
-    	if (YM2612.Mode & 0xC0)
+		if (YM2612.Mode & 0x40)
 		{
 			CALC_FINC_SL(&(YM2612.CHANNEL[2].SLOT[S0]), FINC_TAB[YM2612.CHANNEL[2].FNUM[2]] >> (7 - YM2612.CHANNEL[2].FOCT[2]), YM2612.CHANNEL[2].KC[2]);
 			CALC_FINC_SL(&(YM2612.CHANNEL[2].SLOT[S1]), FINC_TAB[YM2612.CHANNEL[2].FNUM[3]] >> (7 - YM2612.CHANNEL[2].FOCT[3]), YM2612.CHANNEL[2].KC[3]);
@@ -2416,15 +2410,7 @@ void YM2612_Timers_Update(int length)
 		{
 			YM2612.Status |= (YM2612.Mode & 0x04) >> 2;
 			YM2612.TimerAcnt += YM2612.TimerAL;
-	      	/*----------------------
-		      |Mode| Behaviour     |
-		      |----|---------------|
-		      | 00 | Normal        |
-		      | 01 | Special       |
-		      | 10 | Special + CSM |
-		      | 11 | Special       |
-		      ---------------------- */
-	      	if ((YM2612.Mode & 0xC0) == 0x80) CSM_Key_Control(); // found by Nemesis
+			if (YM2612.Mode & 0x80) CSM_Key_Control();
 		}
 	}
 

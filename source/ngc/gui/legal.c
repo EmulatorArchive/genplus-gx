@@ -22,6 +22,9 @@
 #include "font.h"
 #include "dkpro.h"
 
+extern u32 *xfb[2];
+extern int whichfb;
+
 /*
  * Unpack the devkit pro logo
  */
@@ -90,10 +93,7 @@ void legal ()
       free (dkproraw);
   }
   else WriteCentre (ypos, "Developed with DevkitPPC and libOGC");
-#ifdef HW_RVL
-  SetScreen ();
-  sleep(1);
-#endif
+
   WriteCentre (ypos, "Press A to continue");
   SetScreen ();
   WaitButtonA ();

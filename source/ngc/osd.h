@@ -6,42 +6,45 @@
 
 #include <gccore.h>
 #include <ogcsys.h>
+#include <sdcard.h>
+#include <gcaram.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
-#include <fat.h>
-#include <sys/dir.h>
 
-#include "ogc_input.h"
-#include "ogc_audio.h"
-#include "ogc_video.h"
-#include "config.h"
-#include "history.h"
+extern void error (char *format, ...);
+extern void draw_init (void);
+extern void viewport_init ();
+extern void genesis_set_region ();
 
-#define update_input() ogc_input__update()
+extern s16 square[];
+extern s16 xshift;
+extern s16 yshift;
+extern s16 xscale;
+extern s16 yscale;
+extern uint8 tv_mode;
+extern uint8 gc_pal;
+extern uint8 aspect;
+extern unsigned int *xfb[2];
+extern int whichfb;
+extern GXRModeObj *tvmodes[6];  /* emulator rendering modes */
+extern GXRModeObj *vmode;       /* default menu rendering mode */
 
-/* globals */
-extern u32 diff_usec(long long start,long long end);
-extern long long gettime();
-extern void error(char *format, ...);
-extern int getcompany();
-extern void reloadrom();
-extern void ClearGGCodes();
-extern void GetGGEntries();
-extern void legal();
-extern void MainMenu();
-extern void set_region();
-extern int ManageSRAM(u8 direction, u8 device);
-extern int ManageState(u8 direction, u8 device);
-extern void OpenDVD();
-extern int OpenSD();
-extern void OpenHistory();
-extern void memfile_autosave();
-extern void memfile_autoload();
-
-extern int peripherals;
-extern int frameticker;
 extern int FramesPerSecond;
+
+/* options */
+extern uint8 overscan;
+extern uint8 use_480i;
+extern uint8 FM_GENS;
+extern uint8 hq_fm;
+extern uint8 ssg_enabled;
+extern double psg_preamp;
+extern double fm_preamp;
+extern uint8 boost;
+extern uint8 region_detect;
+extern uint8 sys_type[2];
+extern uint8 force_dtack;
+extern uint8 dmatiming;
+extern uint8 vdptiming;
 
 #endif /* _OSD_H_ */

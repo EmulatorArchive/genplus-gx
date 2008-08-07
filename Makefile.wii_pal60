@@ -7,7 +7,7 @@ ifeq ($(strip $(DEVKITPPC)),)
 $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC)
 endif
 
-include $(DEVKITPPC)/gamecube_rules
+include $(DEVKITPPC)/wii_rules
 
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
@@ -15,8 +15,8 @@ include $(DEVKITPPC)/gamecube_rules
 # SOURCES is a list of directories containing source code
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
-TARGET		:=	genplus_cube
-BUILD		:=	build_cube
+TARGET		:=	genplus_wii_pal60
+BUILD		:=	build_wii_pal60
 SOURCES		:=	source source/m68k source/cpu source/sound source/cart_hw\
 			source/cart_hw/svp source/ngc source/ngc/gui source/ngc/vfat
 INCLUDES	:=	source source/m68k source/cpu source/sound source/cart_hw\
@@ -26,7 +26,7 @@ INCLUDES	:=	source source/m68k source/cpu source/sound source/cart_hw\
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	= -g -fno-strict-aliasing -O2 -Wall $(MACHDEP) $(INCLUDE) -DWORDS_BIGENDIAN -DNGC="1" -DHW_DOL
+CFLAGS	= -g -O2 -mrvl -Wall $(MACHDEP) -fno-strict-aliasing $(INCLUDE) -DWORDS_BIGENDIAN -DNGC="1" -DHW_RVL -DFORCE_EURGB60
 CXXFLAGS	=	$(CFLAGS)
 
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
@@ -105,6 +105,14 @@ clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).dol
 
+#---------------------------------------------------------------------------------
+run:
+	psoload $(TARGET).dol
+
+#---------------------------------------------------------------------------------
+reload:
+	psoload -r $(TARGET).dol
+
 
 #---------------------------------------------------------------------------------
 else
@@ -117,6 +125,13 @@ DEPENDS	:=	$(OFILES:.o=.d)
 $(OUTPUT).dol: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
 
+#---------------------------------------------------------------------------------
+# This rule links in binary data with the .jpg extension
+#---------------------------------------------------------------------------------
+%.jpg.o	:	%.jpg
+#---------------------------------------------------------------------------------
+	@echo $(notdir $<)
+	$(bin2o)
 
 -include $(DEPENDS)
 
