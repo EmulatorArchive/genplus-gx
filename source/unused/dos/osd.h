@@ -14,9 +14,5 @@
 #include "config.h"
 #include "sealintf.h"
 #include "error.h"
-#include "unzip.h"
-#include "fileio.h"
-
-#define update_input()  dos_update_input()
 
 #endif /* _OSD_H_ */

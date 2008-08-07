@@ -43,7 +43,7 @@ unsigned int FLIP32(unsigned int b)
 	return c;
 }
 
-#define ROMOFFSET 0x80700000
+#define ROMOFFSET 0x80600000
 
 int main( int argc, char *argv[] )
 {

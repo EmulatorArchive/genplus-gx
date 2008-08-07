@@ -25,15 +25,9 @@
 #ifndef OSD_CPU_H
 #define OSD_CPU_H
 
-#ifndef NGC
-#ifndef DOS
-#include "basetsd.h"
-#endif
-#undef TRUE
-#undef FALSE
-#define TRUE 1
-#define FALSE 0
-#endif
+//#ifndef DOS
+//#include "basetsd.h"
+//#endif
 
 typedef unsigned char						UINT8;
 typedef unsigned short						UINT16;

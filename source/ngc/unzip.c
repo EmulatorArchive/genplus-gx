@@ -1,17 +1,34 @@
-/******************************************************************************
+/****************************************************************************
+ *  Genesis Plus 1.2a
+ *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Nintendo Gamecube Zip Support
  *
  * Only partial support is included, in that only the first file within the archive
- * is considered to be a ROM image.
+ * is considered to be a Genesis ROM image.
  ***************************************************************************/
+#include <zlib.h>
+#include <sdcard.h>
 #include "shared.h"
 #include "dvd.h"
 #include "font.h"
-#include <zlib.h>
 
-/* SDCARD File access */
-extern FILE *sdfile;
+extern sd_file *filehandle;
+extern u8 UseSDCARD;
 
 /*
  * PKWare Zip Header - adopted into zip standard
@@ -78,7 +95,7 @@ int IsZipFile (char *buffer)
  *
  * It should be noted that there is a limit of 5MB total size for any ROM
  ******************************************************************************/
-int UnZipBuffer (unsigned char *outbuffer, u64 discoffset, int length, u8 UseSDCARD)
+int UnZipBuffer (unsigned char *outbuffer, u64 discoffset, int length)
 {
   PKZIPHEADER pkzip;
   int zipoffset = 0;
@@ -94,13 +111,10 @@ int UnZipBuffer (unsigned char *outbuffer, u64 discoffset, int length, u8 UseSDC
   /*** Read Zip Header ***/
   if ( UseSDCARD )
   {
-    fseek(sdfile, 0, SEEK_SET);
-    fread(readbuffer, 1, 2048, sdfile);
+	SDCARD_SeekFile(filehandle, 0, SDCARD_SEEK_SET);
+	SDCARD_ReadFile(filehandle, &readbuffer, 2048);
   }
-  else
-  {
-    dvd_read (&readbuffer, 2048, discoffset);
-  }
+  else dvd_read (&readbuffer, 2048, discoffset);
 
   /*** Copy PKZip header to local, used as info ***/
   memcpy (&pkzip, &readbuffer, sizeof (PKZIPHEADER));
@@ -126,11 +140,11 @@ int UnZipBuffer (unsigned char *outbuffer, u64 discoffset, int length, u8 UseSDC
   /*** Now do it! ***/
   do
   {
-    zs.avail_in = zipchunk;
-    zs.next_in = (Bytef *) & readbuffer[zipoffset];
-    
-    /*** Now inflate until input buffer is exhausted ***/
-    do
+      zs.avail_in = zipchunk;
+      zs.next_in = (Bytef *) & readbuffer[zipoffset];
+
+	  /*** Now inflate until input buffer is exhausted ***/
+      do
 	  {
 	    zs.avail_out = ZIPCHUNK;
 	    zs.next_out = (Bytef *) & out;
@@ -145,31 +159,27 @@ int UnZipBuffer (unsigned char *outbuffer, u64 discoffset, int length, u8 UseSDC
 	    have = ZIPCHUNK - zs.avail_out;
 	    if (have)
 	    {
-        /*** Copy to normal block buffer ***/
+		  /*** Copy to normal block buffer ***/
 	      memcpy (&outbuffer[bufferoffset], &out, have);
 	      bufferoffset += have;
 	    }
-    }
-    while (zs.avail_out == 0);
+      }
+      while (zs.avail_out == 0);
 
 	  /*** Readup the next 2k block ***/
-    zipoffset = 0;
-    zipchunk = ZIPCHUNK;
-	  
-    if (UseSDCARD)
-    {
-      fread(readbuffer, 1, 2048, sdfile);
-    }
-    else
-    {
+      zipoffset = 0;
+      zipchunk = ZIPCHUNK;
       discoffset += 2048;
-      dvd_read (&readbuffer, 2048, discoffset);
-    }
+	  
+	  if (UseSDCARD) SDCARD_ReadFile(filehandle, &readbuffer, 2048);
+	  else dvd_read (&readbuffer, 2048, discoffset);
   }
   while (res != Z_STREAM_END);
 
   inflateEnd (&zs);
 
+  if ( UseSDCARD ) SDCARD_CloseFile(filehandle);
+  
   if (res == Z_STREAM_END)
   {
     if (FLIP32 (pkzip.uncompressedSize) == (u32) bufferoffset) return bufferoffset;

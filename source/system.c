@@ -1,25 +1,20 @@
-/***************************************************************************************
- *  Genesis Plus 1.2a
- *  Main Emulation
- *
- *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- ****************************************************************************************/
+/*
+    Copyright (C) 1999, 2000, 2001, 2002, 2003  Charles MacDonald
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #include "shared.h"
 
@@ -27,131 +22,167 @@
 #define CLOCK_PAL  53203424
 #define SND_SIZE (snd.buffer_size * sizeof(int16))
 
-/* Global variables */
 t_bitmap bitmap;
 t_snd snd;
-uint8  vdp_rate;
-uint16 lines_per_frame;
-double Master_Clock;
-uint32 m68cycles_per_line;
-uint32 z80cycles_per_line;
-uint32 aim_m68k;
-uint32 count_m68k;
-uint32 line_m68k;
-uint32 aim_z80;
-uint32 count_z80;
-uint32 line_z80;
-int32 current_z80;
-uint8 odd_frame;
-uint8 interlaced;
-uint32 frame_cnt;
-uint8 system_hw;
+uint32 aim_m68k   = 0;
+uint32 count_m68k = 0;
+uint32 total_m68k = 0;
+uint32 dma_m68k   = 0;
+uint32 aim_z80    = 0;
+uint32 count_z80  = 0;
+uint16 misc68Kcycles   = 488;
+uint16 miscZ80cycles   = 228;
+uint16 lines_per_frame = 262;
+double CPU_Clock    = (double)CLOCK_NTSC;
+void *myFM = NULL;
+static int sound_tbl[312];
+static int sound_inc[312];
+uint8 alttiming = 0;
 
-/* Function prototypes */
-static void audio_update (void);
-
-/****************************************************************
- * CPU execution managment
- ****************************************************************/
-
-/* Interrupt Manager
-   this is called before each new executed instruction
-   only if interrupts have been updated 
- */
-static inline void update_interrupts(void)
+void m68k_run (int cyc) 
 {
-	uint8 latency = hvint_updated;
-	hvint_updated = -1;
-
-	if (vint_pending && (reg[1] & 0x20))
+	int cyc_do = cyc - count_m68k; /* cycles remaining to run for the line */
+	if (cyc_do > 0)
 	{
-    vint_triggered = 1;
-    if (latency) count_m68k += m68k_execute(latency);
-		m68k_set_irq(6);
-	}
-	else if (hint_pending && (reg[0] & 0x10))
-	{
-		m68k_set_irq(4);
-	}
-	else
-	{
-		m68k_set_irq(0);
-	}
-}
-
-static inline void m68k_run (int cyc) 
-{
-	while (count_m68k < cyc)
-	{
-		/* check interrupts */
-		if (hvint_updated >= 0) update_interrupts();
-
-		/* execute a single instruction */
-		count_m68k += m68k_execute(1);
+		m68k_execute(cyc_do);
+		count_m68k += cyc_do;
 	}
 }
 
 void z80_run (int cyc) 
 {
-  current_z80 = cyc - count_z80;
-	if (current_z80 > 0) count_z80 += z80_execute(current_z80);
+	int cyc_do = cyc - count_z80;
+	if (cyc_do > 0) count_z80 += z80_execute(cyc_do);
 }
 
-/****************************************************************
- * Virtual Genesis initialization
- ****************************************************************/
+void m68k_freeze(int cycles)
+{
+	extern int m68ki_remaining_cycles;
+	int extra_cycles = cycles - m68k_cycles_remaining();
+ 
+	if (extra_cycles > 0)
+	{
+		/* end of 68k execution */
+		m68ki_remaining_cycles = 0;
+
+		/* extra cycles are burned at next execution */
+		count_m68k += extra_cycles; 
+	}
+	else m68ki_remaining_cycles -= cycles; /* we burn some 68k cycles */
+}
+
+extern uint8 hq_fm;
+int audio_init (int rate)
+{
+	int i;
+	int vclk = (int)(CPU_Clock / 7.0);  /* 68000 and YM2612 clock */
+	int zclk = (int)(CPU_Clock / 15.0); /* Z80 and SN76489 clock  */
+
+	/* Clear the sound data context */
+	memset (&snd, 0, sizeof (snd));
+
+	/* Make sure the requested sample rate is valid */
+	if (!rate || ((rate < 8000) | (rate > 48000))) return (0);
+	
+	/* Calculate the sound buffer size */
+	snd.buffer_size = (rate / vdp_rate);
+	snd.sample_rate = rate;
+
+	/* Allocate sound buffers */
+	if (FM_GENS)
+	{
+		snd.fm.gens_buffer[0] = realloc (snd.fm.gens_buffer[0], snd.buffer_size * sizeof (int));
+		snd.fm.gens_buffer[1] = realloc (snd.fm.gens_buffer[1], snd.buffer_size * sizeof (int));
+		if (!snd.fm.gens_buffer[0] || !snd.fm.gens_buffer[1]) return (-1);
+		memset (snd.fm.gens_buffer[0], 0, SND_SIZE*2);
+		memset (snd.fm.gens_buffer[1], 0, SND_SIZE*2);
+	}
+	else
+	{
+		snd.fm.buffer[0] = realloc (snd.fm.buffer[0], snd.buffer_size * sizeof (int16));
+		snd.fm.buffer[1] = realloc (snd.fm.buffer[1], snd.buffer_size * sizeof (int16));
+		if (!snd.fm.buffer[0] || !snd.fm.buffer[1]) return (-1);
+		memset (snd.fm.buffer[0], 0, SND_SIZE);
+		memset (snd.fm.buffer[1], 0, SND_SIZE);
+	}
+
+	snd.psg.buffer = realloc (snd.psg.buffer, snd.buffer_size * sizeof (int16));
+	if (!snd.psg.buffer) return (-1);
+	memset (snd.psg.buffer, 0, SND_SIZE);
+
+	/* Set audio enable flag */
+	snd.enabled = 1;
+
+	/* Initialize sound chip emulation */
+	if (PSG_MAME) SN76496_sh_start(zclk, 0, rate);
+	else
+	{
+		SN76489_Init(0, zclk, rate);
+		SN76489_Config(0, MUTE_ALLON, VOL_FULL, FB_SEGAVDP, SRW_SEGAVDP, 0);
+	}
+
+	if (FM_GENS) YM2612_Init(vclk, rate, hq_fm);
+	else if (!myFM) myFM = YM2612Init (0, 0, vclk, rate, 0, 0);
+
+	/* Make sound table */
+	for (i = 0; i < lines_per_frame; i++)
+	{
+		float p = (snd.buffer_size * i) / lines_per_frame;
+		float q = (snd.buffer_size * (i+1)) / lines_per_frame;
+		sound_tbl[i] = p;
+		sound_inc[i] = ((q - p) * 1000000) / snd.sample_rate;
+	}
+	return (0);
+}
+
 void system_init (void)
 {
-	/* PAL/NTSC timings */
-	vdp_rate        = vdp_pal ? 50 : 60;
-	lines_per_frame = vdp_pal ? 313 : 262;
-	Master_Clock	  = vdp_pal ? (double)CLOCK_PAL : (double)CLOCK_NTSC;
-	
-	/* CPU cycles increments */
-	z80cycles_per_line = 228;
-	m68cycles_per_line = 488;
+	/* PAL or NTSC timings */
+	vdp_rate        = (vdp_pal) ? 50 : 60;
+	lines_per_frame = (vdp_pal) ? 313 : 262;
+	CPU_Clock = (vdp_pal) ? (double)CLOCK_PAL : (double)CLOCK_NTSC;
+	miscZ80cycles = (vdp_pal) ? 227 : 228;
+	misc68Kcycles = (vdp_pal) ? 487 : 488;
 
 	gen_init ();
 	vdp_init ();
 	render_init ();
-  cart_hw_init();
+	sound_init();
 }
 
-/****************************************************************
- * Virtual Genesis Restart
- ****************************************************************/
 void system_reset (void)
 {
-	aim_m68k	  = 0;
-	count_m68k	= 0;
-	line_m68k	  = 0;
-	aim_z80		  = 0;
-	count_z80	  = 0;
-	line_z80	  = 0;
-	current_z80	= 0;
-	odd_frame	  = 0;
-	interlaced	= 0;
-	frame_cnt   = 0;
-
-	/* Cart Hardware reset */
-	cart_hw_reset();		
-
-	/* Hard reset */
-	gen_reset (1); 
+	aim_m68k = 0;
+	count_m68k = 0;
+	total_m68k = 0;
+	dma_m68k   = 0;
+	aim_z80    = 0;
+	count_z80  = 0;
+	
+	gen_reset ();
+	io_reset();
 	vdp_reset ();
 	render_reset ();
-	io_reset();
-	SN76489_Reset(0);
 
-	/* Sound buffers reset */
-	memset (snd.psg.buffer, 0, SND_SIZE);
-	memset (snd.fm.buffer[0], 0, SND_SIZE*2);
-	memset (snd.fm.buffer[1], 0, SND_SIZE*2);
+	if (snd.enabled)
+	{
+		fm_reset();
+		if (FM_GENS)
+		{
+			memset (snd.fm.gens_buffer[0], 0, SND_SIZE*2);
+			memset (snd.fm.gens_buffer[1], 0, SND_SIZE*2);
+		}
+		else
+		{
+			memset (snd.fm.buffer[0], 0, SND_SIZE);
+			memset (snd.fm.buffer[1], 0, SND_SIZE);
+		}
+
+		if (!PSG_MAME) SN76489_Reset(0);
+		memset (snd.psg.buffer, 0, SND_SIZE);
+	}
 }
 
-/****************************************************************
- * Virtual Genesis shutdown
- ****************************************************************/
 void system_shutdown (void)
 {
 	gen_shutdown ();
@@ -159,208 +190,183 @@ void system_shutdown (void)
 	render_shutdown ();
 }
 
-/****************************************************************
- * Virtual Genesis Frame emulation
- ****************************************************************/
 int system_frame (int do_skip)
 {
-	int line;
-	
-	/* reset cycles counts */
-	count_m68k = 0;
-  aim_m68k = 0;
-  aim_z80 = 0;
-	count_z80 = 0;
-  fifo_write_cnt = 0;
-  fifo_lastwrite = 0;
+	/* update total cycles count */
+	total_m68k += count_m68k;
+	dma_m68k += count_m68k;
 
-  /* increment frame counter */
-  frame_cnt ++;
+	/* reset line cycles counts */
+	aim_m68k   = 0;
+	count_m68k = 0;
+	aim_z80   = 0;
+	count_z80 = 0;
+	lastbusreqcnt = -1000;
 
 	if (!gen_running) return 0;
 
-  /* Clear VBLANK & DMA BUSY flags */
-  status &= 0xFFF5;
+	/* Clear V-Blank flag */
+	status &= 0xFFF7;
 
-	/* Look for interlace mode change */
-	uint8 old_interlaced = interlaced;
-  interlaced = (reg[12] & 2) >> 1;
-	if (old_interlaced != interlaced)
-  {
-		bitmap.viewport.changed = 2;
-    im2_flag = ((reg[12] & 6) == 6) ? 1 : 0;
-		odd_frame = 1;
-	}
-
-  /* Toggle even/odd field flag (interlaced modes only) */
-  odd_frame ^= 1;
-  if (odd_frame && interlaced) status |= 0x0010;
-  else status &= 0xFFEF;
+	/* Toggle even/odd flag (IM2 only) */
+	if (im2_flag) status ^= 0x0010;
 
 	/* Reset HCounter */
 	h_counter = reg[10];
 
-  /* Parse sprites for line 0 (done on line 261 or 312) */
+	/* Point to start of sound buffer */
+	snd.fm.lastStage = snd.fm.curStage = 0;
+	snd.psg.lastStage = snd.psg.curStage = 0;
+
+	/* Parse sprites for line 0 (done on line 261) */
 	parse_satb (0x80);
 
 	/* Line processing */
-	for (line = 0; line < lines_per_frame; line ++)
+	for (v_counter = 0; v_counter < lines_per_frame; v_counter ++)
 	{
-    /* Update VCounter */
-		v_counter = line;
+		/* update cpu cycles goal for the line */
+		aim_z80  += miscZ80cycles;
+		aim_m68k += misc68Kcycles;
 
-		/* 6-Buttons or Menacer update */
-		input_update();
+	  	/* 6-Buttons or Menacer update */
+	  	input_update();
 
- 		/* Update CPU cycle counters */
-    line_m68k = aim_m68k;
-		line_z80  = aim_z80;
-    aim_z80  += z80cycles_per_line;
-    aim_m68k += m68cycles_per_line;
+		/* If a Z80 interrupt is still pending after a scanline, cancel it */
+		if (zirq)
+		{
+			zirq = 0;
+			z80_set_irq_line(0, CLEAR_LINE);
+		}
 
-		/* Check "soft reset" */
-		if (line == resetline) gen_reset(0);
-
-    /* Horizontal Interrupt */
-		if (line <= bitmap.viewport.h)
+		/* H Int */
+		if (v_counter <= frame_end)
 		{
 			if(--h_counter < 0)
 			{
 				h_counter = reg[10];
 				hint_pending = 1;
-        hvint_updated = 0;
-				
-        /* previous scanline was shortened (see below), we execute extra cycles on this line */
-        if (line != 0) aim_m68k += 36; 
-      }
-
-      /* HINT will be triggered on next line, approx. 36 cycles before VDP starts line rendering */
-      /* during this period, any VRAM/CRAM/VSRAM writes should NOT be taken in account before next line */
-      /* as a result, current line is shortened */
-      /* fix Lotus 1, Lotus 2 RECS, Striker, Zero the Kamikaze Squirell */
-      if ((line < bitmap.viewport.h)&&(h_counter == 0)) aim_m68k -= 36; 
+				if(reg[0] & 0x10) m68k_set_irq(4);
+			}
 		}
 
-    /* Check if there is any DMA in progess */
-    if (dma_length) dma_update();
-
-    /* Render Line */
-    if (!do_skip) 
-    {
-      render_line(line,odd_frame);
-			if (line < (bitmap.viewport.h-1)) parse_satb(0x81 + line);
-    }
-
-		/* Vertical Retrace */
-		if (line == bitmap.viewport.h)
+		/* Render a line of the display if needed */
+		if (do_skip == 0 && !alttiming)
 		{
-      /* update inputs */
-      update_input();
-
-      /* set VBLANK flag */
-      status |= 0x08;
-
-      /* Z80 interrupt is 16ms period (one frame) and 64us length (one scanline) */
-			zirq = 1;
-			z80_set_irq_line(0, ASSERT_LINE);  
-			 
-      /* delay between HINT, VBLANK and VINT (approx. 14.7 us) */
-      m68k_run(line_m68k + 84); /* need to take upcoming latency in account (Hurricanes, Outrunners) */
-      if (zreset && !zbusreq) z80_run(line_z80 + 40);
-      else count_z80 = line_z80 + 40;
-
-			/* Vertical Interrupt */
-      status |= 0x80;
-      vint_pending = 1;
-      hvint_updated = 30; /* Tyrants, Mega-Lo-Mania & Ex Mutant need some cycles to read VINT flag */
+			if (v_counter < frame_end) render_line(v_counter);
+			if (v_counter < (frame_end-1)) parse_satb(0x81 + v_counter);
 		}
-    else if (zirq)
-    {
-      /* clear any pending Z80 interrupt */
-      zirq = 0;
-      z80_set_irq_line(0, CLEAR_LINE);
-    }
 
-		/* Process line */
+		/* H retrace */
+		status |= 0x0004; // HBlank = 1
+		m68k_run(aim_m68k - 404);
+		status &= 0xFFFB; // HBlank = 0
+
+		if (do_skip == 0 && alttiming) /* hack for Legend of Galahad and Road Rash serie (one-line glitch)*/
+		{
+			if (v_counter < frame_end) render_line(v_counter);
+			if (v_counter < (frame_end-1)) parse_satb(0x81 + v_counter);
+		}
+
+		if (v_counter == frame_end)
+		{
+			/* V Retrace */
+			status |= 0x0008; // VBlank = 1
+			m68k_run(aim_m68k - 360);
+			if (zreset == 1 && zbusreq == 0) z80_run(aim_z80 - 168);
+			else count_z80 = aim_z80 - 168;
+
+			/* V Int */
+			status |= 0x0080;
+			vint_pending = 1;
+		    if (reg[1] & 0x20) m68k_set_irq(6);
+
+			/* Z Int */
+			if (zreset == 1 && zbusreq == 0)
+			{
+				zirq = 1;
+				z80_set_irq_line(0, ASSERT_LINE);  
+			} 
+		}
+
+		/* Process end of line */
 		m68k_run(aim_m68k);
 		if (zreset == 1 && zbusreq == 0) z80_run(aim_z80);
 		else count_z80 = aim_z80;
-		
-		/* SVP chip */
-		if (svp) ssp1601_run(SVP_cycles);
+
+		/* Update sound buffers and timers */
+		fm_update_timers (sound_inc[v_counter]);
+		snd.fm.curStage = sound_tbl[v_counter];
+		snd.psg.curStage = sound_tbl[v_counter];
 	}
 
-	audio_update ();
-		
+	if (snd.enabled) audio_update ();
 	return gen_running;
 }
 
-/****************************************************************
- *							Audio System 
- ****************************************************************/
-int audio_init (int rate)
-{
-	/* Clear the sound data context */
-	memset (&snd, 0, sizeof (snd));
-
-	/* Make sure the requested sample rate is valid */
-	if (!rate || ((rate < 8000) | (rate > 48000))) return (0);
-	snd.sample_rate = rate;
-	
-	/* Calculate the sound buffer size (for one frame) */
-	snd.buffer_size = (rate / vdp_rate);
-
-	/* (re)allocate sound buffers */
-	snd.fm.buffer[0] = realloc (snd.fm.buffer[0], snd.buffer_size * sizeof (int));
-	snd.fm.buffer[1] = realloc (snd.fm.buffer[1], snd.buffer_size * sizeof (int));
-	if (!snd.fm.buffer[0] || !snd.fm.buffer[1]) return (-1);
-	memset (snd.fm.buffer[0], 0, SND_SIZE*2);
-	memset (snd.fm.buffer[1], 0, SND_SIZE*2);
-	snd.psg.buffer = realloc (snd.psg.buffer, SND_SIZE);
-	if (!snd.psg.buffer) return (-1);
-	memset (snd.psg.buffer, 0, SND_SIZE);
-
-	/* Set audio enable flag */
-	snd.enabled = 1;
-
-	/* Initialize Sound Chips emulation */
-	sound_init(rate);
-
-	return (0);
-}
-
+/****************************************************************************
+ * softdev - 09 Mar 2006
+ *
+ *
+ * Nintendo Gamecube Specific Mixer from here on in ...
+ ****************************************************************************/
+extern unsigned char soundbuffer[16][3840];
+extern int mixbuffer;
+extern double psg_preamp;
+extern double fm_preamp;
+extern u8 boost;
 static int ll, rr;
 
-static void audio_update (void)
+void audio_update (void)
 {
 	int i;
-  int l, r;
-  double psg_preamp = config.psg_preamp;
-  double fm_preamp  = config.fm_preamp;
-  uint8 boost = config.boost;
-
-#ifdef NGC
+	int l, r;
+	int16 *tempBuffer[2];
 	int16 *sb = (int16 *) soundbuffer[mixbuffer];
-#endif
 
 	/* get remaining samples */
-	sound_update();
+	/* YM2612 */
+	if (FM_GENS)
+	{
+		int *fmBuffer[2];
+		fmBuffer[0] = snd.fm.gens_buffer[0] + snd.fm.lastStage;
+		fmBuffer[1] = snd.fm.gens_buffer[1] + snd.fm.lastStage;
+		YM2612_Update(fmBuffer, snd.buffer_size - snd.fm.lastStage);
+	}
+	else
+	{
+		tempBuffer[0] = snd.fm.buffer[0] + snd.fm.lastStage;
+		tempBuffer[1] = snd.fm.buffer[1] + snd.fm.lastStage;
+		YM2612UpdateOne (myFM, tempBuffer, snd.buffer_size - snd.fm.lastStage);
+	}
+
+	/* PSG */
+	tempBuffer[0] = snd.psg.buffer + snd.psg.lastStage;
+	if (PSG_MAME) SN76496Update (0, tempBuffer[0], snd.buffer_size - snd.psg.lastStage);
+	else SN76489_Update(0, tempBuffer[0], snd.buffer_size - snd.psg.lastStage);
 
 	/* mix samples */
 	for (i = 0; i < snd.buffer_size; i ++)
 	{
+		/* PSG */
 		l = r = (int) ((double)snd.psg.buffer[i] * psg_preamp);
-		l += (int) ((double)snd.fm.buffer[0][i] * fm_preamp);
-		r += (int) ((double)snd.fm.buffer[1][i] * fm_preamp);
-		snd.fm.buffer[0][i] = 0;
-		snd.fm.buffer[1][i] = 0;
-		snd.psg.buffer[i] = 0;
+		
+		if (FM_GENS)
+		{
+			l += (int) ((double)snd.fm.gens_buffer[0][i] * fm_preamp);
+			r += (int) ((double)snd.fm.gens_buffer[1][i] * fm_preamp);
+			snd.fm.gens_buffer[0][i] = 0;
+			snd.fm.gens_buffer[1][i] = 0;
+		}
+		else
+		{
+			l += (int) ((double)snd.fm.buffer[0][i] * fm_preamp);
+			r += (int) ((double)snd.fm.buffer[1][i] * fm_preamp);
+		}
 
-    /* single-pole low-pass filter (6 dB/octave) */
+		/* single-pole low-pass filter (6 dB/octave) */
 		ll = (ll + l) >> 1;
 		rr = (rr + r) >> 1;
 
-    /* boost volume if asked*/
 		l = ll * boost;
 		r = rr * boost;
 
@@ -370,18 +376,10 @@ static void audio_update (void)
 		if (r > 32767) r = 32767;
 		else if (r < -32768) r = -32768;
 
-		/* update sound buffer */
-#ifdef NGC
-		*sb++ = r; // RIGHT channel comes first
 		*sb++ = l;
-#else
-		snd.buffer[0][i] = l;
-		snd.buffer[1][i] = r;
-#endif
-	}
+		*sb++ = r;
+  }
 
-#ifdef NGC
-	mixbuffer++;
-	mixbuffer &= 0xf;
-#endif
+  mixbuffer++;
+  mixbuffer &= 0xf;
 }
