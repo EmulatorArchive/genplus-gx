@@ -1,9 +1,8 @@
 /***************************************************************************************
  *  Genesis Plus 1.2a
- *  M68k Bank access from Z80
  *
  *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
+ *  Copyright (C) 2006,2007,2008 Eke-Eke (compatibility fixes & additional code)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ *  M68k Bank access from Z80
  ****************************************************************************************/
 #ifndef _MEMBNK_H_
 #define _MEMBNK_H_

@@ -1,8 +1,7 @@
 /****************************************************************************
- *  Genesis Plus 1.2a
  *  Cartridge Hardware support
  *
- *  code by Eke-Eke, GC/Wii port
+ *  Copyright (C) 2007 EkeEke
  *
  *  Lots of protection mechanism have been discovered by Haze
  *  (http://haze.mameworld.info/)
@@ -42,7 +41,6 @@ typedef struct
 
 /* global variables */
 extern T_CART_HW cart_hw;
-extern uint8 j_cart;
 
 /* Function prototypes */
 extern void cart_hw_reset();

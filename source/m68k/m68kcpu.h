@@ -554,7 +554,6 @@
 #if M68K_EMULATE_ADDRESS_ERROR
 	#include <setjmp.h>
 	extern jmp_buf m68ki_aerr_trap;
-  	extern int emulate_address_error;
 
 	#define m68ki_set_address_error_trap() \
 		if(setjmp(m68ki_aerr_trap) != 0) \
@@ -569,7 +568,7 @@
 		}
 
 	#define m68ki_check_address_error(ADDR, WRITE_MODE, FC) \
-		if(((ADDR)&1) && emulate_address_error)\
+		if((ADDR)&1) \
 		{ \
 			m68ki_aerr_address = ADDR; \
 			m68ki_aerr_write_mode = WRITE_MODE; \

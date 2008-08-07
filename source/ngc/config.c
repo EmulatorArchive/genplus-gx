@@ -19,7 +19,6 @@ void config_save()
 
   /* save options */
   fwrite(&config, sizeof(config), 1, fp);
-
   fclose(fp);
 }
 
@@ -31,7 +30,6 @@ void config_load()
 
   /* read file */
   fread(&config, sizeof(config), 1, fp);
-
   fclose(fp);
 }
 
@@ -62,7 +60,7 @@ void set_config_defaults(void)
   config.render   = (vmode->viTVMode == VI_TVMODE_NTSC_PROG) ? 2 : 0;
 
   /* controllers options */
-  ogc_input__set_defaults();
-  config.crosshair = 0;
+  config.sys_type[0] = 0;
+  config.sys_type[1] = 0;
 }
 

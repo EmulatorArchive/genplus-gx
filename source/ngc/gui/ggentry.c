@@ -209,11 +209,13 @@ void GGEditLine ()
   char c[2] = { 0, 0 };
   char *v;
   int redraw = 1;
-  int quit = 0;
+
+  /** Lose any previous A press **/
+  while (ogc_input__getMenuButtons() & PAD_BUTTON_A);
 
   editing = 1;
 
-  while (quit == 0)
+  while (!ogc_input__getMenuButtons() & PAD_BUTTON_A)
   {
 	  if (redraw)
 	  {
@@ -264,9 +266,10 @@ void GGEditLine ()
 
 	  if (gghpos[ggrow] < 0) gghpos[ggrow] = 8;
 	  if (gghpos[ggrow] > 8) gghpos[ggrow] = 0;
-
-    if (p & PAD_BUTTON_A) quit = 1;
   }
+
+  /** Lose any previous A press **/
+  while (ogc_input__getMenuButtons() & PAD_BUTTON_A);
 
   editing = 0;
 }
@@ -286,7 +289,7 @@ void GGSelectLine ()
 		Pressing A will enter edit mode.
 		Pressing B will exit to caller.   ***/
 
-  while (quit == 0)
+  while (!(ogc_input__getMenuButtons() & PAD_BUTTON_B) && (quit == 0))
   {
 	  if (redraw)
 	  {

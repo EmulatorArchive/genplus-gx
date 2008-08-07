@@ -1,9 +1,8 @@
 /***************************************************************************************
  *  Genesis Plus 1.2a
- *  Video Display Processor (memory handlers)
  *
  *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
+ *  Copyright (C) 2006,2007,2008 Eke-Eke (compatibility fixes & additional code)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ *  Video Display Processor (memory handlers)
  ****************************************************************************************/
 
 #include "shared.h"
@@ -31,13 +31,13 @@
 /* Mark a pattern as dirty */
 #define MARK_BG_DIRTY(addr)                                     \
 {                                                               \
-    int name = (addr >> 5) & 0x7FF;                             \
-    if(bg_name_dirty[name] == 0) bg_name_list[bg_list_index++] = name; \
-    bg_name_dirty[name] |= (1 << ((addr >> 2) & 0x07));         \
+  int name = (addr >> 5) & 0x7FF;                             \
+  if(bg_name_dirty[name] == 0) bg_name_list[bg_list_index++] = name; \
+  bg_name_dirty[name] |= (1 << ((addr >> 2) & 0x07));         \
 }
 
 /* VDP context */
-uint8 sat[0x400];			/* Internal copy of sprite attribute table */
+uint8 sat[0x400];     /* Internal copy of sprite attribute table */
 uint8 vram[0x10000];  /* Video RAM (64Kx8) */
 uint8 cram[0x80];			/* On-chip color RAM (64x9) */
 uint8 vsram[0x80];    /* On-chip vertical scroll RAM (40x11) */
@@ -54,29 +54,29 @@ uint8 vint_triggered; /* 1= Frame interrupt has been triggered */
 int8 hvint_updated;   /* >= 0: Interrupt lines updated */
 
 /* Global variables */
-uint16 ntab;				              /* Name table A base address */
-uint16 ntbb;				              /* Name table B base address */
-uint16 ntwb;				              /* Name table W base address */
-uint16 satb;				              /* Sprite attribute table base address */
+uint16 ntab;                      /* Name table A base address */
+uint16 ntbb;                      /* Name table B base address */
+uint16 ntwb;                      /* Name table W base address */
+uint16 satb;                      /* Sprite attribute table base address */
 uint16 hscb;				              /* Horizontal scroll table base address */
-uint8 border;				              /* Border color index */
+uint8 border;                     /* Border color index */
 uint8 bg_name_dirty[0x800];	      /* 1= This pattern is dirty */
 uint16 bg_name_list[0x800];	      /* List of modified pattern indices */
 uint16 bg_list_index;		          /* # of modified patterns in list */
 uint8 bg_pattern_cache[0x80000];  /* Cached and flipped patterns */
 uint8 playfield_shift;		        /* Width of planes A, B (in bits) */
-uint8 playfield_col_mask;	        /* Vertical scroll mask */
+uint8 playfield_col_mask;         /* Vertical scroll mask */
 uint16 playfield_row_mask;	      /* Horizontal scroll mask */
-uint32 y_mask;				            /* Name table Y-index bits mask */
-int16 h_counter;			            /* Raster counter */
-int16 hc_latch;				            /* latched HCounter (INT2) */
-uint16 v_counter;			            /* VDP scanline counter */
-uint8 im2_flag;			              /* 1= Interlace mode 2 is being used */
-uint32 dma_length;			          /* Current DMA remaining bytes */
-int32 fifo_write_cnt;		          /* VDP writes fifo count */
-uint32 fifo_lastwrite;		        /* last VDP write cycle */
-uint8 fifo_latency;			          /* VDP write cycles latency */
-uint8 vdp_pal	= 0;		            /* 1: PAL , 0: NTSC (default) */
+uint32 y_mask;                    /* Name table Y-index bits mask */
+int16 h_counter;                  /* Raster counter */
+int16 hc_latch;                   /* latched HCounter (INT2) */
+uint16 v_counter;                 /* VDP scanline counter */
+uint8 im2_flag;                   /* 1= Interlace mode 2 is being used */
+uint32 dma_length;                /* Current DMA remaining bytes */
+int32 fifo_write_cnt;             /* VDP writes fifo count */
+uint32 fifo_lastwrite;            /* last VDP write cycle */
+uint8 fifo_latency;               /* VDP write cycles latency */
+uint8 vdp_pal	= 0;                /* 1: PAL , 0: NTSC (default) */
 
 double vdp_timings[4][4];
 
@@ -123,10 +123,10 @@ static uint8 vdptiming = 1;
 
 */
 static const uint8 dma_rates[16] = {
-  	8,  9, 83 , 102,  /* 68K to VRAM */
+  8,  9, 84 , 102,	/* 68K to VRAM */
 	16, 18, 167, 205, /* 68K to CRAM or VSRAM */
 	15, 17, 166, 204, /* DMA fill */
-  	8,  9, 83 , 102,  /* DMA Copy */
+  8,  9, 83 , 102,  /* DMA Copy */
 };
 
 /* Function prototypes */
@@ -208,15 +208,15 @@ void vdp_reset(void)
 	hctab = cycle2hc32;
 
 	/* reset display area */
-	bitmap.viewport.w = 256;
-	bitmap.viewport.h = 224;
-	bitmap.viewport.oh = 256;
-	bitmap.viewport.ow = 224;
+  bitmap.viewport.w = 256;
+  bitmap.viewport.h = 224;
+  bitmap.viewport.oh = 256;
+  bitmap.viewport.ow = 224;
   
 	/* reset border area */
 	bitmap.viewport.x = config.overscan ? 12 : 0;
 	bitmap.viewport.y = config.overscan ? (vdp_pal ? 32 : 8) : 0;
-  	bitmap.viewport.changed = 1;
+  bitmap.viewport.changed = 1;
 
 	/* initialize some registers (normally set by BIOS) */
 	if (config.bios_enabled != 3)
@@ -226,9 +226,6 @@ void vdp_reset(void)
 		vdp_reg_w(12, 0x81);	/* H40 mode */
 		vdp_reg_w(15, 0x02);	/* auto increment */
 	}
-
-  	/* default latency */
-  	fifo_latency = 27;
 }
 
 void vdp_shutdown(void)
@@ -266,8 +263,8 @@ void vdp_restore(uint8 *vdp_regs)
     */
 		fifo_latency = (reg[12] & 1) ? 27 : 30;
 		if ((code & 0x0F) == 0x01) fifo_latency = fifo_latency * 2;
-	}
-	
+  }
+  
 	/* remake cache */
 	for (i=0;i<0x800;i++) 
   {
@@ -378,7 +375,7 @@ static inline void dma_vbus (void)
 	base = source;
 
 	/* DMA timings */
-	dma_type = (code & 0x06) ? 1 : 0;
+	dma_type = (code & 0x01) ? 0 : 1;
 	dma_length = length;
 	dma_update();
 
@@ -422,7 +419,7 @@ static inline void dma_fill(unsigned int data)
 	{
 		do
 		{
-			/* update internal SAT (fix Battletech) */
+			/* update internal SAT (see Battletech) */
 			WRITE_BYTE(sat, (addr & sat_addr_mask)^1, data);
 
 			WRITE_BYTE(vram, addr^1, data);
@@ -483,7 +480,7 @@ static inline void data_write (unsigned int data)
 			/* Copy SAT data to the internal SAT */
 			if ((addr & sat_base_mask) == satb)
 			{
-				*(uint16 *) &sat[addr & sat_addr_mask & 0xFFFE] = data;
+				*(uint16 *) &sat[addr & sat_addr_mask] = data;
 			}
 
 			/* Only write unique data to VRAM */
@@ -549,7 +546,6 @@ void vdp_ctrl_w(unsigned int data)
 		/* Save address bits A15 and A14 */
 		addr_latch = (addr & 0xC000);
 
-		/* DMA operation */
 		if ((code & 0x20) && (reg[1] & 0x10))
 		{
 			switch (reg[23] & 0xC0)
@@ -607,7 +603,7 @@ unsigned int vdp_ctrl_r(void)
      * 10 - 15	Next word on bus
      */
 
-  	/* update FIFO flags */
+  /* update FIFO flags */
 	if (vdptiming)
 	{
 		fifo_update();
@@ -668,8 +664,8 @@ void vdp_data_w(unsigned int data)
 		if (fifo_write_cnt >= 4)
 		{
 			status |= 0x100; 
-      if (fifo_write_cnt > 4) count_m68k = fifo_lastwrite + fifo_latency;
-    }
+		  if (fifo_write_cnt > 4) count_m68k = fifo_lastwrite + fifo_latency;
+	  }
 	}
 
 	/* write data */
@@ -723,6 +719,7 @@ void vdp_reg_w(unsigned int r, unsigned int d)
   {
     case 0x00: /* CTRL #1 */
 			if ((d&0x10) != (reg[0]&0x10)) hvint_updated = 0;
+			if (!(d & 0x02)) hc_latch = -1; /* latch HVC */
       break;
 
     case 0x01: /* CTRL #2 */
@@ -735,17 +732,17 @@ void vdp_reg_w(unsigned int r, unsigned int d)
         /* Update the height of the viewport */
         bitmap.viewport.oh = bitmap.viewport.h;
         bitmap.viewport.h = (d & 8) ? 240 : 224;
-		    if (config.overscan) bitmap.viewport.y = ((vdp_pal ? 288 : 240) - bitmap.viewport.h) / 2;
+				if (config.overscan) bitmap.viewport.y = ((d & 8) ? 0 : 8) + (vdp_pal ? 24 : 0);
         bitmap.viewport.changed = 1;                
 
-		    /* update VC table */
-		    if (vdp_pal) vctab = (d & 8) ? vc_pal_240 : vc_pal_224;
+				/* update VC table */
+				if (vdp_pal) vctab = (d & 8) ? vc_pal_240 : vc_pal_224;
       }
 			
-      /* DISPLAY switched ON/OFF during HBLANK */
-			if ((v_counter < bitmap.viewport.h) && ((d&0x40) != (reg[1]&0x40)))
+      /* DISPLAY status modified before effective line starts rendering */
+      if ((d&0x40) != (reg[1]&0x40))
       {
-        if (count_m68k <= (line_m68k + 128))
+        if (count_m68k <= (line_m68k + 120))
         {
           /* Redraw the current line :
             - Legend of Galahad, Lemmings 2, Nigel Mansell's World Championship Racing (set display OFF)
@@ -786,11 +783,11 @@ void vdp_reg_w(unsigned int r, unsigned int d)
         color_update(0x00, *(uint16 *)&cram[(border << 1)]);
 
         /* background color modified during HBLANK */
-        if ((v_counter < bitmap.viewport.h) && (count_m68k <= (line_m68k + 84)))
+        if (count_m68k <= line_m68k + 84)
         {
           /* remap current line (see Road Rash I,II,III) */
           reg[7] = d;
-          remap_buffer(v_counter,bitmap.viewport.w + 2*bitmap.viewport.x);
+          remap_buffer(v_counter,bitmap.viewport.w);
 				}
       }
       break;

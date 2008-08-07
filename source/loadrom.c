@@ -1,9 +1,8 @@
 /***************************************************************************************
  *  Genesis Plus 1.2a
- *  ROM Loading Support
  *
  *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
+ *  Copyright (C) 2006,2007,2008 Eke-Eke (GC/Wii port, compatibility fixes & additional code)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ *  ROM Loading Support
  ****************************************************************************************/
 
 #include <ctype.h>
@@ -168,7 +168,7 @@ uint16 GetRealChecksum (uint8 *rom, int length)
 
   for (i = 0; i < length; i += 2)
   {
-    checksum += ((rom[i] << 8) + rom[i + 1]);
+      checksum += ((rom[i] << 8) + rom[i + 1]);
   }
 
   return checksum;
@@ -205,7 +205,7 @@ int getcompany ()
 
 	/** Strip any trailing spaces **/
 	for (i = strlen (company) - 1; i >= 0; i--)
-  if (company[i] == 32) company[i] = 0;
+		if (company[i] == 32) company[i] = 0;
 
 	if (strlen (company) == 0) return MAXCOMPANY - 1;
 
@@ -278,15 +278,10 @@ void getrominfo (char *romheader)
 
   for (i = 0; i < 14; i++)
 	for (j=0; j < 14; j++)
-	if (rominfo.io_support[i] == peripheralinfo[j].pID[0]) peripherals |= (1 << j);
+		if (rominfo.io_support[i] == peripheralinfo[j].pID[0]) peripherals |= (1 << j);
 
-  for (i = 0; i < 8; i++)
-  {
-    input.padtype[i] = (peripherals & P6BUTTONS) ? DEVICE_6BUTTON : DEVICE_3BUTTON;
-#ifdef HW_RVL
-    if (config.input[i].device == 1) input.padtype[i] = DEVICE_3BUTTON;
-#endif
-   }
+  if (peripherals & P6BUTTONS) pad_type = DEVICE_6BUTTON;
+  else pad_type = DEVICE_3BUTTON;
 }
 
 /* 05/05/2006: new region detection routine (taken from GENS sourcecode) */
@@ -328,7 +323,7 @@ void set_region ()
 	else region_code = REGION_USA;
 
 	/* some games need specific REGION setting */
-  if (((strstr(rominfo.product,"T-45033") != NULL) && (rominfo.checksum == 0x0F81)) || /* Alisia Dragon (E) */
+    if (((strstr(rominfo.product,"T-45033") != NULL) && (rominfo.checksum == 0x0F81)) || /* Alisia Dragon (E) */
 	     (strstr(rominfo.product,"T-69046-50") != NULL)) /* On Dal Jang Goon (Korea) */
 	{
 		/* need PAL settings */
@@ -393,15 +388,16 @@ int load_rom(char *filename)
 	    memcpy(cart_rom, cart_rom + offset, size);
 	}
 
-	/* max. 10 MBytes supported */
-	if (size > 0xA00000) size = 0xA00000;
+	/* max. 5 MBytes supported */
+	if (size > 0x500000) size = 0x500000;
 	genromsize = size;
 	
 	/* clear unused ROM space */
-	if (size < 0xA00000) memset (cart_rom + size, 0x00, 0xA00000 - size);
+	if (size < 0x500000) memset (cart_rom + size, 0x00, 0x500000 - size);
 
 	getrominfo((char *)cart_rom);	/* get infos from ROM header */
 	set_region();			/* set game region (PAL/NTSC, JAP/USA/EUR) */
+	cart_hw_init();			/* cartridge extra hardware */
    
 #ifdef LSB_FIRST
 	/* Byteswap ROM */
@@ -414,7 +410,7 @@ int load_rom(char *filename)
 	}
 #endif
 
-	/* byteswapped RADICA dumps (from Haze) */
+	/* byteswapped genesis dumps */
 	if (((strstr(rominfo.product,"-K0101") != NULL) && (rominfo.checksum == 0xf424)) ||
 	    ((strstr(rominfo.product,"-K0109") != NULL) && (rominfo.checksum == 0x4f10)))
 	{
@@ -427,10 +423,5 @@ int load_rom(char *filename)
 		}
 	}
 
-	/* console hardware */
-  if (strstr(rominfo.consoletype, "SEGA PICO") != NULL) system_hw = SYSTEM_PICO;
-  else if (strstr(rominfo.consoletype, "SEGA MEGADRIVE") != NULL) system_hw = SYSTEM_MEGADRIVE;
-  else system_hw = SYSTEM_GENESIS;
-
-  return(1);
+    return(1);
 }

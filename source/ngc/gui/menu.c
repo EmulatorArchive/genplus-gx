@@ -24,7 +24,6 @@
 #include "shared.h"
 #include "dvd.h"
 #include "font.h"
-#include "history.h"
 
 #ifdef HW_RVL
 #include <wiiuse/wpad.h>
@@ -197,7 +196,7 @@ void soundmenu ()
 				}
 				break;
 
-      case -1:
+			case -1:
 				quit = 1;
 				break;
 		}
@@ -270,7 +269,6 @@ void miscmenu ()
 
 			case 2:	/*** BIOS support ***/
         config.bios_enabled ^= 1;
-        system_reset ();
 				break;
 
 			case 3:	/*** SVP emulation ***/
@@ -328,8 +326,8 @@ void dispmenu ()
 		sprintf (items[3], "Borders: %s", config.overscan ? " ON" : "OFF");
 		sprintf (items[4], "Center X: %s%02d", config.xshift < 0 ? "-":"+", abs(config.xshift));
 		sprintf (items[5], "Center Y: %s%02d", config.yshift < 0 ? "-":"+", abs(config.yshift));
-		sprintf (items[6], "Scale  X: %s%02d", config.xscale < 0 ? "-":"+", abs(config.xscale));
-		sprintf (items[7], "Scale  Y: %s%02d", config.yscale < 0 ? "-":"+", abs(config.yscale));
+		sprintf (items[6], "Scale  X:  %02d", config.xscale);
+		sprintf (items[7], "Scale  Y:  %02d", config.yscale);
 
 		ret = domenu (&items[0], count, 1);
 
@@ -337,12 +335,23 @@ void dispmenu ()
 		{
 			case 0: /*** config.aspect ratio ***/
 				config.aspect ^= 1;
-        count = config.aspect ? 6 : 8;
+				if (config.aspect) config.overscan = old_overscan;
+				else
+				{
+					old_overscan = config.overscan;
+					config.overscan = 0;
+				}
+				count = config.aspect ? 6 : 8;
+
+				/* reinitialize config.aspect area */
+				bitmap.viewport.x = config.overscan ? ((reg[12] & 1) ? 16 : 12) : 0;
+				bitmap.viewport.y = config.overscan ? (((reg[1] & 8) ? 0 : 8) + (vdp_pal ? 24 : 0)) : 0;
 				bitmap.viewport.changed = 1;
 				break;
 
 			case 1:	/*** rendering ***/
 				config.render = (config.render + 1) % 3;
+
 				if (config.render == 2)
 				{
 					if (VIDEO_HaveComponentCable())
@@ -366,10 +375,15 @@ void dispmenu ()
 				break;
 		
 			case 3: /*** overscan emulation ***/
-				config.overscan ^= 1;
-				bitmap.viewport.x = config.overscan ? ((reg[12] & 1) ? 16 : 12) : 0;
-				bitmap.viewport.y = config.overscan ? (((reg[1] & 8) ? 0 : 8) + (vdp_pal ? 24 : 0)) : 0;
-				bitmap.viewport.changed = 1;
+				if (config.aspect)
+				{
+					config.overscan ^= 1;
+
+					/* reinitialize config.aspect area */
+					bitmap.viewport.x = config.overscan ? ((reg[12] & 1) ? 16 : 12) : 0;
+					bitmap.viewport.y = config.overscan ? (((reg[1] & 8) ? 0 : 8) + (vdp_pal ? 24 : 0)) : 0;
+					bitmap.viewport.changed = 1;
+				}
 				break;
 
 			case 4:	/*** Center X ***/
@@ -407,254 +421,116 @@ void dispmenu ()
 /****************************************************************************
  * ConfigureJoypads
  ****************************************************************************/
+static uint8 old_sys_type[2] = {0,0};
 void ConfigureJoypads ()
 {
-	int ret, max_players;
-	int i = 0;
-  int quit = 0;
+	int ret;
+	int quit = 0;
 	int prevmenu = menu;
-  char padmenu[7][20];
-
-  int player = 0;
 #ifdef HW_RVL
-  u32 exp;
+  int count = 6;
+  char padmenu[6][20];
+#else
+  int count = 5;
+  char padmenu[5][20];
 #endif
-
+  int player = 0;
 	strcpy (menutitle, "Press B to return");
+  sprintf (padmenu[4], "Set GAMEPAD");
+#ifdef HW_RVL
+  sprintf (padmenu[5], "Set WIIMOTE");
+#endif
 
 	menu = 0;
 	while (quit == 0)
 	{
-    /* update max players */
-    max_players = 0;
-    if (input.system[0] == SYSTEM_GAMEPAD)
-    {
-      sprintf (padmenu[0], "Port 1: GAMEPAD");
-      max_players ++;
-    }
-    else if (input.system[0] == SYSTEM_WAYPLAY)
-    {
-      sprintf (padmenu[0], "Port 1: 4-WAYPLAY");
-      max_players += 4;
-    }
-    else if (input.system[0] == SYSTEM_TEAMPLAYER)
-    {
-      sprintf (padmenu[0], "Port 1: TEAMPLAYER");
-      max_players += 4;
-    }
-    else
-      sprintf (padmenu[0], "Port 1: NONE");
+    if (input.system[1] == SYSTEM_MENACER) sprintf (padmenu[0], "PortA -      NONE");
+    else if (config.sys_type[0] == 0) sprintf (padmenu[0], "PortA -   GAMEPAD");
+    else if (config.sys_type[0] == 1) sprintf (padmenu[0], "PortA -  MULTITAP");
+    else if (config.sys_type[0] == 2) sprintf (padmenu[0], "PortA -       NONE");
 
-    if (input.system[1] == SYSTEM_GAMEPAD)
-    {
-      sprintf (padmenu[1], "Port 2: GAMEPAD");
-      max_players ++;
-    }
-    else if (input.system[1] == SYSTEM_WAYPLAY)
-    {
-      sprintf (padmenu[1], "Port 2: 4-WAYPLAY");
-    }
-    else if (input.system[1] == SYSTEM_TEAMPLAYER)
-    {
-      sprintf (padmenu[1], "Port 2: TEAMPLAYER");
-      max_players += 4;
-    }
-    else if (input.system[1] == SYSTEM_MENACER)
-    {
-      sprintf (padmenu[1], "Port 2: MENACER");
-      max_players += 1;
-    }
-    else if (input.system[1] == SYSTEM_JUSTIFIER)
-    {
-      sprintf (padmenu[1], "Port 2: JUSTIFIERS");
-      max_players += 1;
-    }
-    else
-      sprintf (padmenu[1], "Port 2: NONE");
+    if (input.system[1] == SYSTEM_MENACER) sprintf (padmenu[1], "PortB -   MENACER");
+    else if (config.sys_type[1] == 0)	sprintf (padmenu[1], "PortB -   GAMEPAD");
+    else if (config.sys_type[1] == 1)	sprintf (padmenu[1], "PortB -  MULTITAP");
+    else if (config.sys_type[1] == 2) sprintf (padmenu[1], "PortB -       NONE");
 
-    /* JCART special case */
-    if (j_cart) max_players +=2;
+    sprintf (padmenu[2], "Configure Player: %d", player +1);
+    if (pad_type) sprintf (padmenu[3], "Type  -  6BUTTONS");
+    else sprintf (padmenu[3], "Type  -  3BUTTONS");
 
-    /* reset current player nr */
-    if (player >= max_players)
-    {
-      /* remove duplicate assigned inputs */
-      if ((0!=player) && (config.input[0].device == config.input[player].device) && (config.input[0].port == config.input[player].port))
-      {
-          config.input[0].device = -1;
-          config.input[0].port = i%4;
-      }
-      player = 0;
-    }
-
-    sprintf (padmenu[2], "Gun Cursor: %s", config.crosshair ? " ON":"OFF");
-    sprintf (padmenu[3], "Set Player: %d%s", player + 1, (j_cart && (player > 1)) ? "-JCART" : "");
-
-    if (config.input[player].device == 0)
-      sprintf (padmenu[4], "Device: GAMECUBE %d", config.input[player].port + 1);
-#ifdef HW_RVL
-    else if (config.input[player].device == 1)
-      sprintf (padmenu[4], "Device: WIIMOTE %d", config.input[player].port + 1);
-    else if (config.input[player].device == 2)
-      sprintf (padmenu[4], "Device: NUNCHUK %d", config.input[player].port + 1);
-    else if (config.input[player].device == 3)
-      sprintf (padmenu[4], "Device: CLASSIC %d", config.input[player].port + 1);
-#endif
-    else
-      sprintf (padmenu[4], "Device: NONE");
-
-    /* when using wiimote, force to 3Buttons pad */
-    if (config.input[player].device == 1) input.padtype[player] = DEVICE_3BUTTON;
-    sprintf (padmenu[5], "%s", (input.padtype[player] == DEVICE_3BUTTON) ? "Type: 3BUTTONS":"Type: 6BUTTONS");
-
-    sprintf (padmenu[6], "Configure Input");
-
-    ret = domenu (&padmenu[0], 7,0);
-
+		ret = domenu (&padmenu[0], count,0);
 		switch (ret)
 		{
 			case 0:
-        if (j_cart)
-        {
-          WaitPrompt("JCART detected !");
-          break;
-        }
-        input.system[0] ++;
-        if (input.system[0] == SYSTEM_MENACER) input.system[0] ++;
-        if (input.system[0] == SYSTEM_JUSTIFIER) input.system[0] ++;
+			  if (input.system[1] == SYSTEM_MENACER) break;
+			  config.sys_type[0] ++;
+			  if (config.sys_type[0] > 2) config.sys_type[0] = 0;
 
-        if (input.system[0] == SYSTEM_WAYPLAY) input.system[1] = SYSTEM_WAYPLAY;
-        if (input.system[0] > SYSTEM_WAYPLAY)
-        {
-          input.system[0] = NO_SYSTEM;
-          input.system[1] = SYSTEM_GAMEPAD;
-        }
+			  if (config.sys_type[0] == 0)
+			  {
+				  input.system[0] = SYSTEM_GAMEPAD;
+			  }
+			  else if (config.sys_type[0] == 1)
+			  {
+				  input.system[0] = SYSTEM_TEAMPLAYER;
+		    }
+			  else if (config.sys_type[0] == 2)
+			  {
+				  input.system[0] = NO_SYSTEM;
+			  }
 			  break;
 		
 			case 1:
-        if (j_cart)
-        {
-          WaitPrompt("JCART detected !");
-          break;
-        }
-        input.system[1] ++;
-        if (input.system[1] == SYSTEM_WAYPLAY) input.system[0] = SYSTEM_WAYPLAY;
-        if (input.system[1] > SYSTEM_WAYPLAY)
-        {
-          input.system[1] = NO_SYSTEM;
-          input.system[0] = SYSTEM_GAMEPAD;
-        }
+			  if (input.system[1] == SYSTEM_MENACER) break;
+			  config.sys_type[1] ++;
+			  if (config.sys_type[1] > 2) config.sys_type[1] = 0;
+
+			  if (config.sys_type[1] == 0)
+			  {
+				  input.system[1] = SYSTEM_GAMEPAD;
+			  }
+			  else if (config.sys_type[1] == 1)
+			  {
+				  input.system[1] = SYSTEM_TEAMPLAYER;
+	      }
+			  else if (config.sys_type[1] == 2)
+			  {
+				  input.system[1] = NO_SYSTEM;
+			  }
 			  break;
 
       case 2:
-        config.crosshair ^= 1;
+        player = (player +1) % 4;
         break;
 
-      case 3:
-        /* remove duplicate assigned inputs */
-        for (i=0; i<8; i++)
-        {
-          if ((i!=player) && (config.input[i].device == config.input[player].device) && (config.input[i].port == config.input[player].port))
-          {
-            config.input[i].device = -1;
-            config.input[i].port = i%4;
-          }
-        }
-        player = (player + 1) % max_players;
+			case 3:
+			  pad_type ^= 1;
+			  io_reset();
+			  break;
+			
+			case 4:
+        ogc_input__config(player,0);
         break;
 
-      case 4:
 #ifdef HW_RVL
-        if (config.input[player].device == 1)
-        {
-          config.input[player].port ++;
-        }
-        else
-        {
-          config.input[player].device ++;
-          if (config.input[player].device == 1) config.input[player].port = 0;
-        }
-
-        if (config.input[player].device == 1)
-        {
-          exp = 4;
-          if (config.input[player].port<4)
-          {
-            WPAD_Probe(config.input[player].port,&exp);
-            if ((exp == WPAD_EXP_NONE) && (config.input[player].port == (player % 4))) exp = WPAD_EXP_CLASSIC;
-          }
-
-          while ((config.input[player].port<4) && (exp != WPAD_EXP_CLASSIC))
-          {
-            config.input[player].port ++;
-            if (config.input[player].port<4)
-            {
-              exp = 4;
-              WPAD_Probe(config.input[player].port,&exp);
-              if ((exp == WPAD_EXP_NONE) && (config.input[player].port == (player % 4))) exp = WPAD_EXP_CLASSIC;
-            }
-          }
-
-          if (config.input[player].port >= 4)
-          {
-            config.input[player].port = player % 4;
-            config.input[player].device = 2;
-          }
-        }
-
-        if (config.input[player].device == 2)
-        {
-          exp = 4;
-          WPAD_Probe(config.input[player].port,&exp);
-          if (exp != WPAD_EXP_NUNCHUK) config.input[player].device ++;
-        }
-
-        if (config.input[player].device == 3)
-        {
-          exp = 4;
-          WPAD_Probe(config.input[player].port,&exp);
-          if (exp != WPAD_EXP_CLASSIC) config.input[player].device ++;
-        }
-
-        if (config.input[player].device > 3)
-        {
-          config.input[player].device = 0;
-        }
-#else
-        config.input[player].device ++;
-        if (config.input[player].device > 3)
-        {
-          config.input[player].device = 0;
-        }
+      case 5:
+        ogc_input__config(player,1);
+        break;
 #endif
-        break;
-    
-			case 5:
-        if (config.input[player].device == 1) break;
-        input.padtype[player] ^= 1;
-        break;
-
-      case 6:
-        ogc_input__config(config.input[player].port, config.input[player].device, input.padtype[player]);
-        break;
 
 			case -1:
-        /* remove duplicate assigned inputs */
-        for (i=0; i<8; i++)
-        {
-          if ((i!=player) && (config.input[i].device == config.input[player].device) && (config.input[i].port == config.input[player].port))
-          {
-            config.input[i].device = -1;
-            config.input[i].port = i%4;
-          }
-        }
+			  if ((old_sys_type[0] != config.sys_type[0]) || (old_sys_type[1] != config.sys_type[1]))
+			  {
+          old_sys_type[0] = config.sys_type[0];
+          old_sys_type[1] = config.sys_type[1];
+          system_reset();
+			  }
 			  quit = 1;
 			  break;
 		}
 	}
 
 	menu = prevmenu;
-  io_reset();
 }
 
 /****************************************************************************
@@ -806,22 +682,21 @@ int filemenu ()
 	return 0;
 }
 
-
 /****************************************************************************
  * Load Rom menu
  *
  ****************************************************************************/
+#ifndef HW_RVL
 static u8 load_menu = 0;
 
 void loadmenu ()
 {
 	int ret;
 	int quit = 0;
-	int count = 3;
-	char item[3][20] = {
-		{"Load Recent"},
-		{"Load from SDCARD"},
-		{"Load from DVD"}
+	int count = 2;
+	char item[2][20] = {
+		{"Load from DVD"},
+		{"Load from SDCARD"}
 	};
 
 	menu = load_menu;
@@ -836,8 +711,8 @@ void loadmenu ()
 				quit = 1;
 				break;
 
-			case 0: /*** Load Recent ***/
-				OpenHistory();
+			case 0:	 /*** Load from DVD ***/
+				OpenDVD();
 				quit = 1;
 				break;
 
@@ -845,23 +720,12 @@ void loadmenu ()
 				OpenSD();
 				quit = 1;
 				break;
-
-      case 2:	 /*** Load from DVD ***/
-#ifndef HW_RVL
-        OpenDVD();
-				quit = 1;
-#elif WII_DVD
-        OpenDVD();
-				quit = 1;
-#else
-        WaitPrompt("Not implemented... yet ;)");
-#endif
-        break;
 		}
 	}
 
 	load_menu = menu;
 }
+#endif
 
 /***************************************************************************
   * Show rom info screen
@@ -879,10 +743,7 @@ void showrominfo ()
   redraw = 1;
 
   /*** Remove any still held buttons ***/
-  while (PAD_ButtonsHeld(0))  PAD_ScanPads();
-#ifdef HW_RVL
-  while (WPAD_ButtonsHeld(0)) WPAD_ScanPads();
-#endif
+  while(PAD_ButtonsHeld(0)) VIDEO_WaitVSync();
 
   max = 14;
   for (i = 0; i < 14; i++)
@@ -1048,18 +909,20 @@ void MainMenu ()
 				break;
 
 			case 2:  /*** Emulator Reset ***/
-				if (genromsize || (config.bios_enabled == 3))
+				if (genromsize)
 				{
-          			system_init ();
-          			audio_init(48000);
-          			system_reset (); 
+					system_reset ();
 					quit = 1;
 				}
 				break;
 
 			case 3:  /*** Load ROM Menu ***/
-        		loadmenu();
-        		menu = 0;
+#ifdef HW_RVL
+        OpenSD();
+#else
+        loadmenu();
+#endif
+        menu = 0;
 				break;
 
 			case 4:  /*** Memory Manager ***/

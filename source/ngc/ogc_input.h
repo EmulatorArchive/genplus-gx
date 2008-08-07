@@ -21,22 +21,11 @@
 #ifndef _GC_INPUT_H_
 #define _GC_INPUT_H_
 
-/* number of configurable keys */
-#define MAX_KEYS 8
-
-typedef struct 
-{
-  s8 device;
-  u8 port;
-} t_input_config;
-
-
 extern int ConfigRequested;
 
 extern void ogc_input__init(void);
-extern void ogc_input__set_defaults(void);
 extern void ogc_input__update(void);
-extern void ogc_input__config(u8 num, u8 type, u8 padtype);
+extern void ogc_input__config(u8 pad, u8 type);
 extern u16 ogc_input__getMenuButtons(void);
 
 #endif

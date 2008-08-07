@@ -27,10 +27,7 @@ typedef struct
   uint8 aspect;
   uint8 overscan;
   uint8 render;
-  uint16 pad_keymap[4][MAX_KEYS];
-  uint32 wpad_keymap[4*3][MAX_KEYS];
-  t_input_config input[MAX_DEVICES];
-  uint8 crosshair;
+  uint8 sys_type[2];
 } t_config;
 
 extern t_config config;

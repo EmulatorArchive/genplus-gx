@@ -1,9 +1,8 @@
 /***************************************************************************************
  *  Genesis Plus 1.2a
- *  Video Display Processor (Rendering)
  *
  *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
+ *  Copyright (C) 2006,2007,2008 Eke-Eke (compatibility fixes & additional code)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ *  Video Display Processor (Rendering)
  ****************************************************************************************/
 
 #include "shared.h"
@@ -580,19 +580,11 @@ void render_shutdown(void)
 /*--------------------------------------------------------------------------*/
 /* Line render function                           */
 /*--------------------------------------------------------------------------*/
-void remap_buffer(int line, int width)
+void remap_buffer(line,width)
 {
-  /* get line offset from framebuffer */
-  int offset = vdp_pal ? bitmap.viewport.y : (bitmap.viewport.y*11/8); // NTSC is 243 lines
-  int vline = (line + offset) % lines_per_frame;
-
-  /* illegal video mode (screen rolls up) */
-  if (!vdp_pal && (reg[1] & 8)) vline = (vline + frame_cnt)%240;
-  
-  /* double resolution mode */
-  if (config.render && interlaced) vline = (vline * 2) + odd_frame;
-	
-  void *out =((void *)&bitmap.data[(vline * bitmap.pitch)]);
+	int vline = (line + bitmap.viewport.y) % lines_per_frame;
+	if (config.render && interlaced) vline = (vline * 2) + odd_frame;	/* double-resolution mode */
+	void *out =((void *)&bitmap.data[(vline * bitmap.pitch)]);
 
 #ifndef NGC
   switch(bitmap.depth)
@@ -618,18 +610,16 @@ void remap_buffer(int line, int width)
 
 void render_line(int line, uint8 odd_frame)
 {
-  /* check if we are inside display area (including vertical borders) */
-  int min = bitmap.viewport.h + bitmap.viewport.y;
-  int max = lines_per_frame - bitmap.viewport.y;
-  if ((line >= min) && (line < max)) return;
+  uint8 *lb = tmp_buf;
+	int width = bitmap.viewport.w;
+	int vline = (line + bitmap.viewport.y) % lines_per_frame;
 
-  uint8 *lb  = tmp_buf;
-	int width  = bitmap.viewport.w;
+	if (vline >= (bitmap.viewport.h + 2*bitmap.viewport.y)) return;
 
-	/* vertical borders or display OFF */
-  if ((line >= bitmap.viewport.h) || (!(reg[1] & 0x40)))
+	if ((line >= bitmap.viewport.h) || (!(reg[1] & 0x40)))
   {
-    memset(&lb[0x20], 0x40 | border, width);
+    /* overscan area or display OFF */
+		memset(&lb[0x20], 0x40 | border, width);
 	}
 	else
   {
@@ -678,7 +668,7 @@ void render_line(int line, uint8 odd_frame)
 		  /*if(!(reg[1] & 0x04) && (reg[0] & 0x20)) memset(&lb[0x20], 0x40 | border, 0x08);*/
   }
 
-	/* horizontal borders */
+	/* horizontal borders (overscan) */
 	if (config.overscan)
 	{
 		memset(&lb[0x20 - bitmap.viewport.x], 0x40 | border, bitmap.viewport.x);
@@ -686,27 +676,9 @@ void render_line(int line, uint8 odd_frame)
 		width += 2 * bitmap.viewport.x;
 	}
 
-  /* LightGun mark */
-  if ((input.dev[4] == DEVICE_LIGHTGUN) && (config.crosshair))
-  {
-    int dy = v_counter - input.analog[0][1];
-
-    if (abs(dy) < 6)
-    {
-      int i;
-      int start = input.analog[0][0] - 4;
-      int end = start + 8;
-      if (start < 0) start = 0;
-      if (end > bitmap.viewport.w) end = bitmap.viewport.w;
-      for (i=start; i<end; i++)
-      {
-        lb[0x20+i] = 0xff;
-      }
-    }
-  }
-
   remap_buffer(line,width);
-}
+
+ }
 
 /*--------------------------------------------------------------------------*/
 /* Window rendering                             */

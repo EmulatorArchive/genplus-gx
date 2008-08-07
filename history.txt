@@ -1,60 +1,7 @@
 Genesis Plus for Gamecube
 ------------------------------
 
-current:
----------
-[Genesis]
-- "cycle-accurate" HINT timings: every timing sensitive games/demos are now *finally* working fine
-- fixed CRAM/VSRAM DMA timings
-- fixed SAT address mask on VRAM writes 
-- improved accuracy of 68k access to Z80: fix music in Pacman 2 when entering PAUSE menu
-- disabled "Address Error" emulation when UMK3 hack is loaded: fix game crashing after a round ends up
-- added support for some additional protected "pirate" games: Pocket Monster, King of Fighter 98, Soul Blade (credits to Haze)
-- improved overall Menacer emulation accuracy
-- fixed Menacer support in Terminator 2: Arcade Game
-- added Konami Justifier emulation: fix lightgun support in Lethal Enforcers 1 & 2
-- (YM2612) fixed LFO phase update for CH3 special mode in MAME core: fix some SFX in Warlock & Alladin (thanks to AamirM)
-- (YM2612) fixed enveloppe attenuation level on "KEY ON" in MAME core: fix Ecco 2's splash sound
-
-[Wii]
-- added Wiimote IR pointing for LightGun control (Menacer/Justifier)
-
-16/07/2008:
------------
-[Genesis]
-- adjusted (again) HINT timings: fix Double Dragon 2 (game freezed), hopefully does not break anything else
-- fixed broken EEPROM support for Codemaster games
-- modified input update timings: fix Dungeons & Dragons - Warriors of the Eternal Sun (thanks to Notaz)
-- added support for "Ultimate Mortal Kombat Trilogy" hack (max. size supported is 10MBytes)
-- added (VERY) preliminar support for PICO roms (credits to Notaz for his documentation)
-- improved YM2612 emulation (credits to Nemesis for his tests on real hardware):
-  .implemented phase overflow emulation: improved fix for special music instrument used in Comix Zone, Flashback, Ariel, Shaq Fu...
-  .improved SSG-EG emulation in MAME core (also based on additional code from Alone Coder)
-  .improved Timers emulation accuracy
-  .improved Enveloppe Generator accuracy
-  .fixed Channel 3 CSM mode emulation
-  .implemented sample interpolation in MAME core to emulate the chip at original frequency (HQ YM2612 mode, from gens)
-
-[NGC/Wii]
-- added automatic alphabetical filesorting (Marty Disibio)
-- added ROM History for faster ROM access (Marty Disibio)
-- fixed a silly input bug in "ROM Infos" & "Game Genie" menus
-- modified "Hard Reset" option
-- improved display sharpness in original rendering mode (H40 cell mode only), filtering is now completely disabled
-- enabled overscan emulation in "STRETCH" aspect mode also
-- added support for horizontal wiimote handling in Menu (automatically used when the wiimote is not pointed towards the screen)
-- improved Controller options
-  .prevented keys reconfiguration if device is not detected
-  .added support for up to 8 players (ISS Pro Deluxe, ...)
-  .each player can be affected to a custom device (GAMECUBE Pad, WIIMOTE/NUNCHUK or CLASSIC)
-  .added the ability to use classic controller & wiimote pad from the same port separately
-  .modified "soft-reset" key on the Wiimote to avoid "accidental" resets (now press Buttons + & - simultaneously)
-  .added MODE button mapping: use "START+Z" on gamepad or "Button Minus" on wiimote/classic (not reconfigurable)
-  .added automatic configuration save for controller options
-
-
-
-01/06/2008:
+30/05/2008:
 -----------
 [Genesis]
 - improved HCounter accuracy: fix graphic glitches in "Striker (Europe)"
@@ -69,7 +16,7 @@ current:
 - added automatic configuration file support
 - /genplus/saves is now automatically created if it does not exist
 - use libfat automatic SDCARD detection: default slot is now always used when accessing SDCARD
-- assigned Reset Button to Genesis Soft-Reset
+- assigned Reset Button to Genesis Sof
 
 [Wii only]
 - added automatic TV mode detection (from SYSCONF), no more PAL60 version needed

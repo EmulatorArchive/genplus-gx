@@ -32,7 +32,7 @@ int whichfb = 0;		  /*** External framebuffer index ***/
 GXRModeObj *vmode;    /*** Menu video mode            ***/
 
 /*** GX ***/
-#define TEX_WIDTH         356
+#define TEX_WIDTH         360
 #define TEX_HEIGHT        576
 #define DEFAULT_FIFO_SIZE 256 * 1024
 #define HASPECT           320
@@ -380,78 +380,38 @@ static void gxStart(void)
 /* set GX scaler */
 static void gxScale(void)
 {
-	int xscale, yscale, xshift, yshift, i;
+	int xscale, yscale, xshift, yshift;
   
-  if (config.overscan)
+  if (config.aspect)
 	{
-    if (config.aspect)
-    {
-		  /* borders are emulated */
-      xscale = (reg[12] & 1) ? 360 : 358;
-      if (gc_pal) xscale -= 1;
-      yscale = (gc_pal && !config.render) ? (vdp_pal ? 144:143) : (vdp_pal ? 121:120);
-    }
-    else
-    {
-      /* fullscreen stretch */
-      xscale = gc_pal ? 354 : 367;
-      yscale = (gc_pal && !config.render) ? (vdp_pal ? (268*144 / bitmap.viewport.h):143) : (vdp_pal ? (224*144 / bitmap.viewport.h):120);
-    }
-    
-		xshift = (config.aspect || !gc_pal) ? 8 : 4;
-		yshift = vdp_pal ? 1 : -1;
-	}
-  else
-	{
-    if (config.aspect)
-    {
-      /* borders are simulated (black) */
-	    xscale = 327;
-      yscale = bitmap.viewport.h / 2;
-		  if (vdp_pal && (!gc_pal || config.render)) yscale = yscale * 243 / 288;
-		  else if (!vdp_pal && gc_pal && !config.render) yscale = yscale * 288 / 243;
+		/* original aspect */
+		if (config.overscan)
+		{
+			/* borders are emulated */
+			xscale = 320;
+			yscale = vdp_pal ? ((gc_pal && !config.render) ? 144 : 121) : ((gc_pal && !config.render) ? 143 : 120);
+			xshift = 8;
+			yshift = vdp_pal ? (gc_pal ? 1 : 0) : 2;
 		}
-    else
-    {
-      /* fullscreen stretch */
-      xscale = gc_pal ? 321 : 334;
-      yscale = (gc_pal && !config.render) ? 134 : 112;
-    }
-    
-		xshift = config.aspect ? 8 : 0;
-		yshift = vdp_pal ? 0 : 2;
+		else
+		{
+			/* borders are simulated (black) */
+			xscale = 290;
+			yscale = bitmap.viewport.h / 2;
+			if (vdp_pal && (!gc_pal || config.render)) yscale = yscale * 243 / 288;
+			else if (!vdp_pal && gc_pal && !config.render) yscale = yscale * 288 / 243;
+			xshift = 8;
+			yshift = vdp_pal ? (gc_pal ? 1 : 0) : 2;
+		}
 	}
-	
-  if (!config.aspect)
+	else
 	{
-    xscale += config.xscale;
-    yscale += config.yscale;
-  }
-  
-  xshift += config.xshift;
-  yshift += config.yshift;
-  
-  /* check horizontal upscaling */
-  if (xscale > 320)
-  {
-    /* let VI do horizontal scaling */
-    uint32 scale = (xscale <= 360) ? xscale : 360;
-    for (i=0; i<6; i++)
-    {
-      tvmodes[i]->viXOrigin = (720 - (scale * 2)) / 2;
-      tvmodes[i]->viWidth   = scale * 2;
-    }
-    xscale -= (scale - 320);
-  }
-  else
-  {
-    /* let GX do horizontal downscaling */
-    for (i=0; i<6; i++)
-    {
-      tvmodes[i]->viXOrigin = 40;
-      tvmodes[i]->viWidth   = 640;
-    }
-  }
+		/* fit screen */
+		xscale = 290;
+		yscale = (gc_pal && !config.render) ? 134 : 112;
+		xshift = 0;
+		yshift = gc_pal ? 1 : 2;
+	}
 
 	/* double resolution */
 	if (config.render)
@@ -460,16 +420,18 @@ static void gxScale(void)
 		 yshift *= 2;
 	}
 
-  /* update matrix */
+  /* user configuration */
+  xscale += config.xscale;
+  yscale += config.yscale;
+  xshift += config.xshift;
+  yshift += config.yshift;
+
 	square[6] = square[3]  =  xscale + xshift;
 	square[0] = square[9]  = -xscale + xshift;
 	square[4] = square[1]  =  yscale + yshift;
 	square[7] = square[10] = -yscale + yshift;
+
 	draw_init();
-
-  /* vertex array have been modified */
-  GX_InvVtxCache ();
-
 }	
 
 /* Reinitialize GX */
@@ -519,6 +481,7 @@ void ogc_video__reset()
   GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, config.render ? GX_TRUE : GX_FALSE, rmode->vfilter);
   GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
   GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+  GX_SetDither(GX_DISABLE);
   guOrtho(p, rmode->efbHeight/2, -(rmode->efbHeight/2), -(rmode->fbWidth/2), rmode->fbWidth/2, 100, 1000);
   GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 }
@@ -558,20 +521,15 @@ void ogc_video__update()
     if (interlaced && config.render) vheight *= 2;
     stride = bitmap.width - (vwidth >> 2);
     
-    /* reset GX scaler */
-    gxScale();
+    /* simulated (black) border area depends on viewport.h */
+    if (config.aspect && !config.overscan) gxScale();
     
     /* reinitialize texture */
     GX_InvalidateTexAll ();
 	  GX_InitTexObj (&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
-    
-    /* original H40 mode: force filtering OFF */
-    if (!config.render && (reg[12]&1))
-    {
-      GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1);
-    }
   }
 
+  GX_InvVtxCache ();
   GX_InvalidateTexAll ();
  
   /* update texture data */
@@ -585,7 +543,7 @@ void ogc_video__update()
       *dst++ = *src4++;
     }
     
-    /* jump to next four lines */
+    /* jumpt to next four lines */
     src1 += stride;
     src2 += stride;
     src3 += stride;

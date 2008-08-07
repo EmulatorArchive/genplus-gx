@@ -17,9 +17,7 @@
 #include "ogc_audio.h"
 #include "ogc_video.h"
 #include "config.h"
-#include "history.h"
 
-#define update_input() ogc_input__update()
 
 /* globals */
 extern u32 diff_usec(long long start,long long end);
@@ -36,7 +34,6 @@ extern int ManageSRAM(u8 direction, u8 device);
 extern int ManageState(u8 direction, u8 device);
 extern void OpenDVD();
 extern int OpenSD();
-extern void OpenHistory();
 extern void memfile_autosave();
 extern void memfile_autoload();
 

@@ -179,9 +179,7 @@ int MountTheCard (u8 slot)
 	int tries = 0;
 	int CardError;
 	*(unsigned long *) (0xcc006800) |= 1 << 13; /*** Disable Encryption ***/
-#ifndef HW_RVL
 	uselessinquiry ();
-#endif
   while (tries < 10)
   {
     VIDEO_WaitVSync ();

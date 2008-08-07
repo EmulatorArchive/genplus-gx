@@ -21,11 +21,6 @@
 #include "gcaram.h"
 #include "dvd.h"
 #include "font.h"
-#include "history.h"
-
-#ifdef WII_DVD
-#include "wdvd.h"
-#endif
 
 /***************************************************************************
  * Genesis Virtual Machine
@@ -41,7 +36,7 @@ static void load_bios()
   if (fp == NULL) return;
 
   /* read file */
-  fread(bios_rom, 1, 0x800, fp);
+  fread(bios_rom, 0x800, 1, fp);
   fclose(fp);
 
   /* update BIOS flags */
@@ -51,7 +46,7 @@ static void load_bios()
 static void init_machine()
 {
   /* Allocate cart_rom here */
-  cart_rom = memalign(32, 0xA00000);
+  cart_rom = memalign(32, 0x500000);
 
   /* BIOS support */
   load_bios();
@@ -69,8 +64,8 @@ static void init_machine()
   bitmap.viewport.y = 0;
   bitmap.remap = 1;
   bitmap.data = malloc (bitmap.width * bitmap.height * bitmap.granularity);
-
-  /* default system */
+  
+  /* default inputs */
   input.system[0] = SYSTEM_GAMEPAD;
   input.system[1] = SYSTEM_GAMEPAD;
 }
@@ -101,44 +96,21 @@ int main (int argc, char *argv[])
   int RenderedFrameCount = 0;
   int FrameCount = 0;
   
-  /* load hacked IOS with full access to DVD interface (WIP) */
-#ifdef WII_DVD
-	IOS_ReloadIOS(5);
-#endif
-
-  /* Initialize OGC subsystems */
+  /* Initialize GC subsystems */
   ogc_video__init();
   ogc_input__init();
   ogc_audio__init();
-
-  /* Initialize DVD interface */
 #ifndef HW_RVL
   DVD_Init ();
   dvd_drive_detect();
-
-#elif WII_DVD
-  if (WDVD_Init())
-  {
-    if (WDVD_Reset())
-    {
-      u64 id;
-      WDVD_LowReadDiskId(&id);
-	  }
-	}
 #endif
-
-  /* Initialize SDCARD Interface (LibFAT) */
   fatInitDefault();
   
-  /* Restore User Configuration */
+  /* Default Config */
   set_config_defaults();
   config_load();
 
-  /* Restore Recent Files list */
-  set_history_defaults();
-  history_load();
-
-  /* Initialize Genesis Virtual Machine */
+  /* Initialize VM */
   init_machine ();
   
   /* Load any injected rom */
@@ -160,6 +132,9 @@ int main (int argc, char *argv[])
   /* Emulation Loop */
   while (1)
   {
+    /* update inputs */
+    ogc_input__update();
+    
     /* Frame synchronization */
     if (gc_pal != vdp_pal)
     {

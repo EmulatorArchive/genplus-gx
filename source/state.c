@@ -1,8 +1,7 @@
 /***************************************************************************************
- *  Genesis Plus 1.2a
  *  FreezeState support
  *
- *  coded by Eke-Eke, GC/Wii port
+ *  Copyright (C) 2006,2007,2008 Eke-Eke
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

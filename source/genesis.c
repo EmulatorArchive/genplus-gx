@@ -1,9 +1,8 @@
 /***************************************************************************************
  *  Genesis Plus 1.2a
- *  Genesis internals & Bus arbitration
  *
  *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
+ *  Copyright (C) 2006,2007,2008 Eke-Eke (compatibility fixes & additional code)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ *  Genesis internals & Bus arbitration
  ****************************************************************************************/
 
 #include "shared.h"
@@ -38,12 +38,14 @@ uint32 rom_size;
 int32 resetline;
 uint8 *rom_readmap[8];
 
+static uint16 cpu_sync[512];
+
 /*--------------------------------------------------------------------------*/
 /* Init, reset, shutdown functions                                          */
 /*--------------------------------------------------------------------------*/
 void set_softreset(void)
 {
-	resetline = (int) ((double) (lines_per_frame - 1) * rand() / (RAND_MAX + 1.0));
+  resetline = (int) ((double) (lines_per_frame - 1) * rand() / (RAND_MAX + 1.0));
 }
 
 void gen_init (void)
@@ -54,6 +56,7 @@ void gen_init (void)
 	m68k_set_cpu_type (M68K_CPU_TYPE_68000);
 	m68k_init();
 	z80_init(0,0,0,z80_irq_callback);
+	for (i=0; i<512; i++) cpu_sync[i] = (uint16)((((double)i * 7.0) / 15.0) + 0.5);
 
 	/* default 68000 mapping */
 	for (i=16; i<24; i++)
@@ -69,21 +72,6 @@ void gen_init (void)
 	m68k_readmap_16[20]		= SYSTEM_IO;
 	m68k_writemap_8[20]		= SYSTEM_IO;
 	m68k_writemap_16[20]	= SYSTEM_IO;
-
-  /* SEGA PICO */
-  if (system_hw == SYSTEM_PICO)
-  {
-    m68k_readmap_8[16]	  = PICO_HW;
-		m68k_readmap_16[16]	  = PICO_HW;
-		m68k_writemap_8[16]	  = PICO_HW;
-		m68k_writemap_16[16]	= PICO_HW;
-
-		/* Notaz: there is no IO CONTROL area (Z80/YM2612/IO) */
-    m68k_readmap_8[20]	  = UNUSED;
-		m68k_readmap_16[20]	  = UNUSED;
-		m68k_writemap_8[20]	  = UNUSED;
-		m68k_writemap_16[20]  = UNUSED;
-  }
 
 	/* VDP */
 	for (i=24; i<28; i++)
@@ -174,7 +162,7 @@ void gen_busreq_w (unsigned int state)
 			/* Z80 stopped */
 			/* z80 was ON during the last 68k cycles */
 			/* we execute the appropriate number of z80 cycles */
-			z80_cycles_to_run = line_z80 + ((count_m68k - line_m68k)*7)/15;
+			z80_cycles_to_run = line_z80 + cpu_sync[count_m68k - line_m68k];
 			z80_run(z80_cycles_to_run);
 		}
 	}
@@ -186,7 +174,7 @@ void gen_busreq_w (unsigned int state)
 			/* Z80 started */
 			/* z80 was OFF during the last 68k cycles */
 			/* we burn the appropriate number of z80 cycles */
-			z80_cycles_to_run = line_z80 + ((count_m68k - line_m68k)*7)/15;
+			z80_cycles_to_run = line_z80 + cpu_sync[count_m68k - line_m68k];
 			count_z80 = z80_cycles_to_run;
 		}
 	}
@@ -207,7 +195,7 @@ void gen_reset_w (unsigned int state)
 			/* Z80 started */
 			/* z80 was OFF during the last 68k cycles */
 			/* we burn the appropriate number of z80 cycles */
-			z80_cycles_to_run = line_z80 + ((count_m68k - line_m68k)*7)/15;
+			z80_cycles_to_run = line_z80 + cpu_sync[count_m68k - line_m68k];
 			count_z80 = z80_cycles_to_run;
 		}
 	}
@@ -219,7 +207,7 @@ void gen_reset_w (unsigned int state)
 			/* Z80 stopped */
 			/* z80 was ON during the last 68k cycles */
 			/* we execute the appropriate number of z80 cycles */
-			z80_cycles_to_run = line_z80 + ((count_m68k - line_m68k)*7)/15;
+			z80_cycles_to_run = line_z80 + cpu_sync[count_m68k - line_m68k];
 			z80_run(z80_cycles_to_run);
 		}
 

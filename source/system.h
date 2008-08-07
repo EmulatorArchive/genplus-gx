@@ -1,9 +1,8 @@
 /***************************************************************************************
  *  Genesis Plus 1.2a
- *  Main Emulation
  *
  *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
+ *  Copyright (C) 2006,2007,2008 Eke-Eke (compatibility fixes & additional code)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,14 +18,11 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ *  Main Emulation
  ****************************************************************************************/
 
 #ifndef _SYSTEM_H_
 #define _SYSTEM_H_
-
-#define SYSTEM_GENESIS    0
-#define SYSTEM_MEGADRIVE  1
-#define SYSTEM_PICO       2
 
 typedef struct
 {
@@ -87,8 +83,6 @@ extern uint32 line_z80;
 extern int32 current_z80;
 extern uint8 interlaced;
 extern uint8 odd_frame;
-extern uint32 frame_cnt;
-extern uint8 system_hw;
 
 /* Function prototypes */
 extern void system_init (void);
