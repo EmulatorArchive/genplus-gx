@@ -1,74 +1,21 @@
-/***************************************************************************************
- *  Genesis Plus 1.2a
- *
- *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Sound Hardware
- ****************************************************************************************/
+/*
+    sound.c
+    FM and PSG handlers
+*/
 
 #include "shared.h"
-
-/* generic functions */
-int  (*_YM2612_Write)(unsigned char adr, unsigned char data);
-int  (*_YM2612_Read)(void);
-void (*_YM2612_Update)(int **buf, int length);
-int (*_YM2612_Reset)(void);
 
 static double m68cycles_per_sample;
 static double z80cycles_per_sample;
 
 /* YM2612 data */
-int fm_reg[2][0x100];		/* Register arrays (2x256) */
-double fm_timera_tab[0x400];	/* Precalculated timer A values (in usecs) */
-double fm_timerb_tab[0x100];	/* Precalculated timer B values (in usecs) */
-
-/* return the number of samples that should have been rendered so far */
-static inline uint32 sound_sample_cnt(uint8 is_z80)
-{
-	if (is_z80) return (uint32) ((double)(count_z80 + current_z80 - z80_ICount) / z80cycles_per_sample);
-	else return (uint32) ((double) count_m68k / m68cycles_per_sample);
-}
-
-/* update FM samples */
-static inline void fm_update()
-{
-	if(snd.fm.curStage - snd.fm.lastStage > 1)
-	{
-        //error("%d(%d): FM update (%d) %d from %d samples (%08x)\n", v_counter, count_z80 + current_z80 - z80_ICount, cpu, snd.fm.curStage , snd.fm.lastStage, m68k_get_reg (NULL, M68K_REG_PC));
-		int *tempBuffer[2];       
-		tempBuffer[0] = snd.fm.buffer[0] + snd.fm.lastStage;
-		tempBuffer[1] = snd.fm.buffer[1] + snd.fm.lastStage;
-		_YM2612_Update(tempBuffer, snd.fm.curStage - snd.fm.lastStage);
-		snd.fm.lastStage = snd.fm.curStage;
-	}
-}
-
-/* update PSG samples */
-static inline void psg_update()
-{
-	if(snd.psg.curStage - snd.psg.lastStage > 1)
-	{
-		int16 *tempBuffer = snd.psg.buffer + snd.psg.lastStage;
-		SN76489_Update (0, tempBuffer, snd.psg.curStage - snd.psg.lastStage);
-		snd.psg.lastStage = snd.psg.curStage;
-	}
-}
-
+uint8 fm_reg[2][0x100];		/* Register arrays (2x256) */
+uint8 fm_latch[2];			/* Register latches */
+double fm_timera_tab[0x400];   /* Precalculated timer A values (in usecs) */
+double fm_timerb_tab[0x100];   /* Precalculated timer B values (in usecs) */
+uint8 ssg_enabled = 0;
+extern uint8 hq_fm;
+	
 void sound_init(int rate)
 {
 	int i;
@@ -84,20 +31,33 @@ void sound_init(int rate)
 	for(i = 0; i < 256; i += 1) fm_timerb_tab[i] = ((double)((256 - i) * 16 * 144) * 1000000.0 / vclk);
 
 	/* Cycle-Accurate sample generation */
-	m68cycles_per_sample = ((double)m68cycles_per_line * (double)lines_per_frame) / (double) (rate / vdp_rate);
-	z80cycles_per_sample = ((double)z80cycles_per_line * (double)lines_per_frame) / (double) (rate / vdp_rate);
+	m68cycles_per_sample = (m68cycles_per_line * (double) lines_per_frame) / (double) (rate / vdp_rate);
+	z80cycles_per_sample = (z80cycles_per_line * (double) lines_per_frame) / (double) (rate / vdp_rate);
 
 	/* initialize sound chips */
-	SN76489_Init(0, (int)zclk, rate);
-	SN76489_Config(0, MUTE_ALLON, VOL_FULL, FB_SEGAVDP, SRW_SEGAVDP, 0);
+	if (PSG_MAME)
+	{
+		_PSG_Write  = SN76496Write;
+		_PSG_Update = SN76496Update;
+		_PSG_Reset  = NULL;
+		SN76496_sh_start((int)zclk, 0, rate);
+	}
+	else
+	{
+		_PSG_Write  = SN76489_Write;
+		_PSG_Update = SN76489_Update;
+		_PSG_Reset  = SN76489_Reset;
+		SN76489_Init(0, (int)zclk, rate);
+		SN76489_Config(0, MUTE_ALLON, VOL_FULL, FB_SEGAVDP, SRW_SEGAVDP, 0);
+	}
 
-	if (config.fm_core)
+	if (FM_GENS)
 	{
 		_YM2612_Write  = YM2612_Write;
 		_YM2612_Read   = YM2612_Read;
 		_YM2612_Update = YM2612_Update;
 		_YM2612_Reset  = YM2612_Reset;
-		YM2612_Init((int)vclk, rate, config.hq_fm);
+		YM2612_Init((int)vclk, rate, hq_fm);
 	}
 	else
 	{
@@ -109,25 +69,26 @@ void sound_init(int rate)
 	}
 } 
 
+/* get remaining samples for the scanline */
 void sound_update(void)
 {
-	/* finalize sound buffers */
-	snd.fm.curStage  = snd.buffer_size;
-	snd.psg.curStage = snd.buffer_size;
+	int *fmBuffer[2];       
+	int16 *psgBuffer;
 
-	/* update last samples (if needed) */
-	fm_update();
-	psg_update();
+	/* FM */
+	fmBuffer[0] = snd.fm.buffer[0] + snd.fm.lastStage;
+	fmBuffer[1] = snd.fm.buffer[1] + snd.fm.lastStage;
+	_YM2612_Update(fmBuffer, snd.buffer_size - snd.fm.lastStage);
+	snd.fm.lastStage = snd.fm.curStage = 0;
 
-	/* reset samples count */
-	snd.fm.curStage   = 0;
-	snd.fm.lastStage  = 0;
-	snd.psg.curStage  = 0;
-	snd.psg.lastStage = 0;
+	/* PSG */
+	if (snd.psg.lastStage > snd.buffer_size) snd.psg.lastStage = snd.buffer_size;
+	psgBuffer = snd.psg.buffer + snd.psg.lastStage;
+	_PSG_Update (0, psgBuffer, snd.buffer_size - snd.psg.lastStage);
+	snd.psg.lastStage = snd.psg.curStage = 0;
 }
 
-/* YM2612 control */
-/* restore FM registers */
+/* restore sound state (only FM needed) */
 void fm_restore(void)
 {
 	int i;
@@ -144,27 +105,59 @@ void fm_restore(void)
 	}
 }
 
-/* write FM chip */
-void fm_write(unsigned int cpu, unsigned int address, unsigned int data)
+/* return the number of samples that should have been rendered so far */
+uint32 get_sample_cnt(uint8 is_z80)
 {
-	snd.fm.curStage = sound_sample_cnt(cpu);
-	fm_update();
+	if (is_z80) return (uint32) ((double)(count_z80 + current_z80 - z80_ICount) / z80cycles_per_sample);
+	else return (uint32) ((double) count_m68k / m68cycles_per_sample);
+}
+
+/* FM controller functions */
+void fm_update(uint8 cpu)
+{
+	snd.fm.curStage = get_sample_cnt(cpu);	
+	if(snd.fm.curStage - snd.fm.lastStage > 1)
+	{
+		int *tempBuffer[2];       
+		tempBuffer[0] = snd.fm.buffer[0] + snd.fm.lastStage;
+		tempBuffer[1] = snd.fm.buffer[1] + snd.fm.lastStage;
+		_YM2612_Update(tempBuffer, snd.fm.curStage - snd.fm.lastStage);
+		snd.fm.lastStage = snd.fm.curStage;
+
+	}
+}
+
+void fm_write(uint8 cpu, int address, int data)
+{
+	int a0 = (address & 1);
+	int a1 = (address >> 1) & 1;
+
+	if(a0) fm_reg[a1][fm_latch[a1]] = data;
+	else fm_latch[a1] = data;
+	
+	fm_update(cpu);
 	_YM2612_Write(address & 3, data);
 }
 
-/* read FM status */
-unsigned int fm_read(unsigned int cpu, unsigned int address)
+int fm_read(uint8 cpu, int address)
 {
-	snd.fm.curStage = sound_sample_cnt(cpu);
-	fm_update();
+	fm_update(cpu);
 	return (_YM2612_Read() & 0xff);
 }
 
-
-/* PSG write */
-void psg_write(unsigned int cpu, unsigned int data)
+void psg_write(uint8 cpu, int data)
 {
-	snd.psg.curStage = sound_sample_cnt(cpu);
-	psg_update();
-	SN76489_Write(0, data);
+	if(snd.enabled)
+	{
+		snd.psg.curStage = get_sample_cnt(cpu);
+		if(snd.psg.curStage - snd.psg.lastStage > 1)
+		{
+			int16 *tempBuffer;
+			tempBuffer = snd.psg.buffer + snd.psg.lastStage;
+			_PSG_Update (0, tempBuffer, snd.psg.curStage - snd.psg.lastStage);
+			snd.psg.lastStage = snd.psg.curStage;
+		}
+
+		_PSG_Write(0, data);
+	}
 }
