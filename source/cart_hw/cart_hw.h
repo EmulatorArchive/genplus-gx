@@ -1,13 +1,5 @@
 /****************************************************************************
- *  Genesis Plus 1.2a
- *  Cartridge Hardware support
- *
- *  code by Eke-Eke, GC/Wii port
- *
- *  Lots of protection mechanism have been discovered by Haze
- *  (http://haze.mameworld.info/)
- *
- *  Realtec mapper has been figured out by TascoDeluxe
+ *  Cart 'Extra Hardware' emulation
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,9 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ***************************************************************************/
-
-#ifndef _CART_HW_H_
-#define _CART_HW_H_
+#ifndef _EXTRA_HW_H_
+#define _EXTRA_HW_H_
 
 /* Hardware description */
 typedef struct
@@ -42,7 +33,6 @@ typedef struct
 
 /* global variables */
 extern T_CART_HW cart_hw;
-extern uint8 j_cart;
 
 /* Function prototypes */
 extern void cart_hw_reset();

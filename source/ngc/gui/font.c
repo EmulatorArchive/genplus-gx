@@ -1,3 +1,24 @@
+/****************************************************************************
+ *  Genesis Plus 1.2a
+ *
+ *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ ***************************************************************************/
+
 /*****************************************************************************
  * IPL FONT Engine
  *
@@ -629,6 +650,8 @@ typedef struct
 
 static unsigned char fontWork[ 0x20000 ] __attribute__((aligned(32)));
 static unsigned char fontFont[ 0x40000 ] __attribute__((aligned(32)));
+extern unsigned int *xfb[2];
+extern int whichfb;
 
 /****************************************************************************
  * YAY0 Decoding
@@ -762,6 +785,7 @@ void init_font(void)
 unsigned int blit_lookup[4]={COLOR_BLACK, 0x6d896d77, 0xb584b57b, COLOR_WHITE};
 unsigned int blit_lookup_inv[4]={COLOR_WHITE, 0xb584b57b, 0x6d896d77, 0x258e2573};
 
+
 void setfontcolour (int fcolour)
 {
 	if (fcolour == COLOR_WHITE)
@@ -817,24 +841,24 @@ void blit_char(int x, int y, unsigned char c, unsigned int *lookup)
 	}
 }
 
-void write_font(int x, int y, char *string)
+void write_font(int x, int y, const unsigned char *string)
 {
 	int ox = x;
 	while (*string && (x < (ox + back_framewidth)))
 	{
 		blit_char(x, y, *string, blit_lookup);
-		x += font_size[(u8)*string];
+		x += font_size[*string];
 		string++;
 	}
 }
 
-void writex(int x, int y, int sx, int sy, char *string, unsigned int *lookup)
+void writex(int x, int y, int sx, int sy, const unsigned char *string, unsigned int *lookup)
 {
 	int ox = x;
 	while ((*string) && ((x) < (ox + sx)))
 	{
 		blit_char(x, y, *string, lookup);
-		x += font_size[(u8)*string];
+		x += font_size[*string];
 		string++;
 	}
 	
@@ -846,19 +870,19 @@ void writex(int x, int y, int sx, int sy, char *string, unsigned int *lookup)
 	}
 }
 
-void WriteCentre( int y, char *string)
+void WriteCentre( int y, const unsigned char *string)
 {
 	int x, t;
-	for (x=t=0; t<strlen(string); t++) x += font_size[(u8)string[t]];
+	for (x=t=0; t<strlen(string); t++) x += font_size[string[t]];
 	if (x>back_framewidth) x=back_framewidth;
 	x = (640 - x) >> 1;
 	write_font(x, y, string);
 }
 
-void WriteCentre_HL( int y, char *string)
+void WriteCentre_HL( int y, const unsigned char *string)
 {
 	int x,t,h;
-    for (x=t=0; t<strlen(string); t++) x += font_size[(u8)string[t]];
+    for (x=t=0; t<strlen(string); t++) x += font_size[string[t]];
 	if (x>back_framewidth) x = back_framewidth;
 	h = x;
 	x = (640 - x) >> 1;
@@ -908,7 +932,6 @@ u8 SILENT = 0;
 
 void SetScreen ()
 {
-
   VIDEO_SetNextFramebuffer (xfb[whichfb]);
   VIDEO_Flush ();
   VIDEO_WaitVSync ();
@@ -921,31 +944,21 @@ void ClearScreen ()
   back_framewidth = 440;
 }
 
-void WaitButtonA ()
-{
-  s16 p = ogc_input__getMenuButtons();
-
-  while (p & PAD_BUTTON_A)
-  {
-    VIDEO_WaitVSync();
-    p = ogc_input__getMenuButtons();
-  }
-
-  while (!(p & PAD_BUTTON_A))
-  {
-    VIDEO_WaitVSync();
-    p = ogc_input__getMenuButtons();
-  }
-}
-
 void WaitPrompt (char *msg)
 {
+  int quit = 0;
+
   if (SILENT) return;
-  ClearScreen();
-  WriteCentre(254, msg);
-  WriteCentre(254 + fheight, "Press A to Continue");
-  SetScreen();
-  WaitButtonA ();
+
+  while (PAD_ButtonsDown(0) & PAD_BUTTON_A) {};
+  while (!(PAD_ButtonsDown(0) & PAD_BUTTON_A) && (quit == 0))
+  {
+      ClearScreen();
+      WriteCentre(254, msg);
+      WriteCentre(254 + fheight, "Press A to Continue");
+      SetScreen();
+      while (!(PAD_ButtonsDown(0) & PAD_BUTTON_A));
+  }
 }
 
 void ShowAction (char *msg)
@@ -955,6 +968,12 @@ void ShowAction (char *msg)
   ClearScreen();
   WriteCentre(254, msg);
   SetScreen();
+}
+
+void WaitButtonA ()
+{
+  while (PAD_ButtonsDown(0) & PAD_BUTTON_A) {};
+  while (!(PAD_ButtonsDown(0) & PAD_BUTTON_A));
 }
 
 /****************************************************************************
@@ -969,7 +988,7 @@ void unpackBackdrop ()
 
   inbytes = gpback_COMPRESSED;
   outbytes = gpback_RAW;
-  res = uncompress ((Bytef *) &backdrop[0], &outbytes, (Bytef *) &gpback[0], inbytes);
+  res = uncompress ((char *) &backdrop[0], &outbytes, (char *) &gpback[0], inbytes);
   if (res != Z_OK) while (1);
 }
 

@@ -29,19 +29,18 @@
 #define PADCAL 70
 
 static int maxfiles;
-static u8 havedir   = 0;
-static u8 haveSDdir = 0;
-static char rootSDdir[SDCARD_MAX_PATH_LEN];
-static int LoadFile (unsigned char *buffer);
-static int offset = 0;
-static int selection = 0;
-static int old_selection = 0;
-static int old_offset = 0;
-static uint8 sdslot = 0;
-
-extern void reloadrom ();
+u8 havedir   = 0;
+u8 haveSDdir = 0;
 u8 UseSDCARD = 0;
 sd_file *filehandle;
+char rootSDdir[SDCARD_MAX_PATH_LEN];
+int LoadFile (unsigned char *buffer);
+int offset = 0;
+int selection = 0;
+int old_selection = 0;
+int old_offset = 0;
+
+extern void reloadrom ();
 
 /***************************************************************************
  * Showfile screen
@@ -96,7 +95,7 @@ int updateSDdirname()
      rootSDdir[size] = 0;
 
 	 /* handles root name */
-	 if (strcmp(rootSDdir,sdslot ?  "dev1:":"dev0:") == 0) sprintf(rootSDdir,"dev%d:\\genplus\\..",sdslot);
+	 if (strcmp(rootSDdir,"dev0:") == 0) sprintf(rootSDdir,"dev0:\\genplus\\..");
 	 
      return 1;
    }
@@ -106,7 +105,7 @@ int updateSDdirname()
      if ((strlen(rootSDdir)+1+strlen(filelist[selection].filename)) < SDCARD_MAX_PATH_LEN) 
      {
        /* handles root name */
-	   if (strcmp(rootSDdir,sdslot ? "dev1:\\genplus\\..":"dev0:\\genplus\\..") == 0) sprintf(rootSDdir,"dev%d:",sdslot);
+	   if (strcmp(rootSDdir,"dev0:\\genplus\\..") == 0) sprintf(rootSDdir,"dev0:");
 	 
 	   /* update current directory name */
        sprintf(rootSDdir, "%s\\%s",rootSDdir, filelist[selection].filename);
@@ -128,8 +127,6 @@ int parseSDdirectory()
   int entries = 0;
   int nbfiles = 0;
   DIR *sddir = NULL;
-
-  SDCARD_Init ();
 
   /* Get a list of files from the actual root directory */ 
   entries = SDCARD_ReadDir (rootSDdir, &sddir);
@@ -262,7 +259,7 @@ void FileSelector ()
 		{
 			filelist[selection].filename_offset = 0;
 			if (((!UseSDCARD) && (basedir == rootdir)) ||
-				(UseSDCARD && strcmp(rootSDdir,sdslot?"dev1:\\genplus\\..":"dev0:\\genplus\\..") == 0)) return;
+				(UseSDCARD && strcmp(rootSDdir,"dev0:\\genplus\\..") == 0)) return;
 			go_up = 1;
 		}
 
@@ -417,11 +414,9 @@ void OpenDVD ()
  * Modified for subdirectory browing & quick filelist recovery
  * Enjoy!
 *****************************************************************************/
-int OpenSD (uint8 slot) 
+int OpenSD () 
 {
   UseSDCARD = 1;
-
-  if (slot != sdslot) haveSDdir = 0;
   
   if (haveSDdir == 0)
   {
@@ -432,8 +427,7 @@ int OpenSD (uint8 slot)
 	 old_selection = selection = offset = old_offset = 0;
 	
 	 /* Reset SDCARD root directory */
-     sprintf(rootSDdir,"dev%d:\\genplus\\roms", slot);
-	 sdslot = slot;
+     sprintf(rootSDdir,"dev0:\\genplus\\roms");
  
 	 /* Parse initial root directory and get entries list */
      ShowAction("Reading Directory ...");
@@ -448,7 +442,7 @@ int OpenSD (uint8 slot)
 	 else
 	 {
 		/* no entries found */
-		WaitPrompt ("Error reading \\genplus\\roms");
+		WaitPrompt ("Error reading dev0:\\genplus\\roms");
 		return 0;
 	 }
   }
@@ -496,7 +490,7 @@ void GetSDInfo ()
  ****************************************************************************/ 
 int LoadFile (unsigned char *buffer) 
 {
-  int readoffset;
+  int offset;
   int blocks;
   int i;
   u64 discoffset;
@@ -509,7 +503,7 @@ int LoadFile (unsigned char *buffer)
   if (rootdirlength == 0) return 0;
   blocks = rootdirlength / 2048;
 
-  readoffset = 0;
+  offset = 0;
   discoffset = rootdir;
   ShowAction ("Loading ... Wait");
   
@@ -524,8 +518,8 @@ int LoadFile (unsigned char *buffer)
       {
 	      if (UseSDCARD) SDCARD_ReadFile (filehandle, &readbuffer, 2048);
 	  	  else dvd_read(readbuffer, 2048, discoffset);
-	      memcpy (buffer + readoffset, readbuffer, 2048);
-	      readoffset += 2048;
+	      memcpy (buffer + offset, readbuffer, 2048);
+	      offset += 2048;
 	      discoffset += 2048;
 	  }
       
@@ -535,7 +529,7 @@ int LoadFile (unsigned char *buffer)
 	     i = rootdirlength % 2048;
 	     if (UseSDCARD) SDCARD_ReadFile (filehandle, &readbuffer, i);
 	     else dvd_read (readbuffer, 2048, discoffset);
-	     memcpy (buffer + readoffset, readbuffer, i);
+	     memcpy (buffer + offset, readbuffer, i);
 	  }
   }
   else return UnZipBuffer (buffer, discoffset, rootdirlength);

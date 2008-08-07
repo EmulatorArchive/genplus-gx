@@ -6,16 +6,16 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 3.32
+ *                                Version 3.31
  *
  * A portable Motorola M680x0 processor emulation engine.
- * Copyright Karl Stenerud.  All rights reserved.
+ * Copyright 1998-2007 Karl Stenerud.  All rights reserved.
  *
  * This code may be freely used for non-commercial purposes as long as this
  * copyright notice remains unaltered in the source code and any binary files
  * containing this code in compiled form.
  *
- * All other licensing terms must be negotiated with the author
+ * All other lisencing terms must be negotiated with the author
  * (Karl Stenerud).
  *
  * The latest version of this code can be obtained at:
@@ -274,7 +274,7 @@ void m68k_set_fc_callback(void  (*callback)(unsigned int new_fc));
  * instruction cycle.
  * Default behavior: do nothing.
  */
-void m68k_set_instr_hook_callback(void  (*callback)(unsigned int pc));
+void m68k_set_instr_hook_callback(void  (*callback)(void));
 
 
 

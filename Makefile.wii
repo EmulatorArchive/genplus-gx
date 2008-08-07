@@ -18,23 +18,23 @@ include $(DEVKITPPC)/wii_rules
 TARGET		:=	genplus_wii
 BUILD		:=	build_wii
 SOURCES		:=	source source/m68k source/cpu source/sound source/cart_hw\
-			source/cart_hw/svp source/ngc source/ngc/gui
+			source/cart_hw/svp source/ngc source/ngc/gui 
 INCLUDES	:=	source source/m68k source/cpu source/sound source/cart_hw\
-			source/cart_hw/svp source/ngc source/ngc/gui
+			source/cart_hw/svp source/ngc source/ngc/gui 
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	= -g -O2 -mrvl -Wall $(MACHDEP) -fno-strict-aliasing $(INCLUDE) -DWORDS_BIGENDIAN -DNGC="1" -DHW_RVL
+CFLAGS	= -g -O2 -mrvl -Wall $(MACHDEP) $(INCLUDE) -DWORDS_BIGENDIAN -DNGC="1"
 CXXFLAGS	=	$(CFLAGS)
 
-LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+LDFLAGS	=	-g $(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-lfat -lwiiuse -lbte -logc -lm -lz
+LIBS	:=	-logc -lm -lz -lsdcard
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

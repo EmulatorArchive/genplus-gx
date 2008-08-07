@@ -261,7 +261,7 @@
 // how is low word really affected by these?
 // nearly sure 'ld A' doesn't affect flags
 #define OP_LDA(x) \
-	rA = x
+	ssp->gr[SSP_A].h = x
 
 #define OP_LDA32(x) \
 	rA32 = x
@@ -325,16 +325,11 @@
 	UPD_ACC_ZN
 
 
-#define OP_CHECK32(OP) { \
+#define OP_CHECK32(OP) \
 	if ((op & 0x0f) == SSP_P) { /* A <- P */ \
-		read_P(); /* update P */ \
-		OP(rP.v); \
-		break; \
-	} \
-	if ((op & 0x0f) == SSP_A) { /* A <- A */ \
-		OP(rA32); \
-		break; \
-	} \
+	read_P(); /* update P */ \
+	OP(ssp->gr[SSP_P].v); \
+	break; \
 }
 
 
@@ -1105,7 +1100,7 @@ void ssp1601_run(int cycles)
 				if (op == ((SSP_A<<4)|SSP_P)) { // A <- P
 					// not sure. MAME claims that only hi word is transfered.
 					read_P(); // update P
-					rA32 = rP.v;
+					rA32 = ssp->gr[SSP_P].v;
 				}
 				else
 				{
@@ -1193,7 +1188,7 @@ void ssp1601_run(int cycles)
 				if (!(op&0x100)) elprintf(EL_SVP|EL_ANOMALY, "ssp FIXME: no b bit @ %04x", GET_PPC_OFFS());
 #endif
 				read_P(); // update P
-				rA32 -= rP.v;	// maybe only upper word?
+				rA32 -= ssp->gr[SSP_P].v;	// maybe only upper word?
 				UPD_ACC_ZN			// there checking flags after this
 				rX = ptr1_read_(op&3, 0, (op<<1)&0x18); // ri (maybe rj?)
 				rY = ptr1_read_((op>>4)&3, 4, (op>>3)&0x18); // rj
@@ -1205,7 +1200,7 @@ void ssp1601_run(int cycles)
 				if (!(op&0x100)) elprintf(EL_SVP|EL_ANOMALY, "ssp FIXME: no b bit @ %04x", GET_PPC_OFFS());
 #endif
 				read_P(); // update P
-				rA32 += rP.v; // confirmed to be 32bit
+				rA32 += ssp->gr[SSP_P].v; // confirmed to be 32bit
 				UPD_ACC_ZN // ?
 				rX = ptr1_read_(op&3, 0, (op<<1)&0x18); // ri (maybe rj?)
 				rY = ptr1_read_((op>>4)&3, 4, (op>>3)&0x18); // rj

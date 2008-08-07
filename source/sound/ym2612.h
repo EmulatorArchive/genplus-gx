@@ -1,15 +1,3 @@
-/***********************************************************
- *                                                         *
- * YM2612.C : YM2612 emulator                              *
- *                                                         *
- * Almost constantes are taken from the MAME core          *
- *                                                         *
- * This source is a part of Gens project                   *
- * Written by Stéphane Dallongeville (gens@consolemul.com) *
- * Copyright (c) 2002 by Stéphane Dallongeville            *
- *                                                         *
- ***********************************************************/
-
 #ifndef _YM2612_H_
 #define _YM2612_H_
 

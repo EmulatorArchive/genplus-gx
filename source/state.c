@@ -1,28 +1,10 @@
-/***************************************************************************************
- *  Genesis Plus 1.2a
- *  FreezeState support
- *
- *  coded by Eke-Eke, GC/Wii port
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- ****************************************************************************************/
+/*
+	Freeze State support (EkeEke)
+*/
 
 #include "shared.h"
 
-static unsigned char state[0x24000];
+static unsigned char state[0x23000];
 static unsigned int bufferptr;
 
 void load_param(void *param, unsigned int size)
@@ -42,18 +24,18 @@ void state_load(unsigned char *buffer)
 	uint32	tmp32;
 	uint16 tmp16;
 	uint8 temp_reg[0x20];
-  unsigned long inbytes, outbytes;
+    unsigned long inbytes, outbytes;
 
 	/* get compressed state size & uncompress state file */
-	memcpy(&inbytes, buffer, 4);
+	memcpy(&inbytes,&buffer[0],sizeof(inbytes));
 	bufferptr = 0;
 
 #ifdef NGC
-	outbytes = 0x24000;
-  uncompress ((Bytef *)state, &outbytes, (Bytef *)(buffer + 4), inbytes);
+	outbytes = 0x23000;
+    uncompress ((Bytef *) &state[0], &outbytes, (Bytef *) &buffer[sizeof(inbytes)], inbytes);
 #else
 	outbytes = inbytes;
-	memcpy(state, buffer + 4, outbytes);
+	memcpy(&state[0], &buffer[sizeof(inbytes)], outbytes);
 #endif
 
 	/* SYSTEM RESET */
@@ -126,7 +108,7 @@ int state_save(unsigned char *buffer)
 {
 	uint32 tmp32;
 	uint16 tmp16;
-  unsigned long inbytes, outbytes;
+    unsigned long inbytes, outbytes;
 
 	/* save state */
 	bufferptr = 0;
@@ -165,7 +147,7 @@ int state_save(unsigned char *buffer)
 	save_param(SN76489_GetContextPtr (0),SN76489_GetContextSize ());
 
 	// 68000 
-  tmp32 = m68k_get_reg(NULL, M68K_REG_D0);	save_param(&tmp32, 4);
+    tmp32 = m68k_get_reg(NULL, M68K_REG_D0);	save_param(&tmp32, 4);
 	tmp32 =	m68k_get_reg(NULL, M68K_REG_D1); 	save_param(&tmp32, 4);
 	tmp32 =	m68k_get_reg(NULL, M68K_REG_D2);	save_param(&tmp32, 4);
 	tmp32 =	m68k_get_reg(NULL, M68K_REG_D3);	save_param(&tmp32, 4);
@@ -192,16 +174,16 @@ int state_save(unsigned char *buffer)
 
 #ifdef NGC
 	/* compress state file */
-	outbytes = 0x26000;
-  compress2 ((Bytef *)(buffer + 4), &outbytes, (Bytef *)state, inbytes, 9);
+	outbytes = 0x24000;
+    compress2 ((Bytef *) &buffer[sizeof(outbytes)], &outbytes, (Bytef *) &state[0], inbytes, 9);
 #else
 	outbytes = inbytes;
-	memcpy(buffer + 4, state, outbytes);
+	memcpy(&buffer[sizeof(outbytes)], &state[0], outbytes);
 #endif
 
 	/* write compressed size in the first 32 bits for decompression */
-	memcpy(buffer, &outbytes, 4);
+	memcpy(&buffer[0], &outbytes, sizeof(outbytes));
 
 	/* return total size */
-	return (outbytes + 4);
+	return (sizeof(outbytes) + outbytes);
 }

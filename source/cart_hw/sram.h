@@ -1,8 +1,7 @@
-/***************************************************************************************
+/****************************************************************************
  *  Genesis Plus 1.2a
- *  SRAM Hardware
  *
- *  code by Eke-Eke, GC/Wii port
+ *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,8 +17,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- ****************************************************************************************/
-
+ * NGC MANAGER
+ ***************************************************************************/
 #ifndef _SRAM_H_
 #define _SRAM_H_
 
@@ -31,7 +30,7 @@ typedef struct
   uint8 custom;
   uint32 start;
   uint32 end;
-  uint32 crc;
+  int crc;
   uint8 sram[0x10000];
 } T_SRAM;
 

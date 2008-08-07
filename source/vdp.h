@@ -1,25 +1,20 @@
-/***************************************************************************************
- *  Genesis Plus 1.2a
- *  Video Display Processor (memory handlers)
- *
- *  Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald (original code)
- *  modified by Eke-Eke (compatibility fixes & additional code), GC/Wii port
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- ****************************************************************************************/
+/*
+    Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #ifndef _VDP_H_
 #define _VDP_H_
@@ -67,14 +62,6 @@ extern uint8 fifo_latency;
 extern uint8 vdp_pal;
 extern double vdp_timings[4][4];
 
-extern uint8 *vctab;
-extern uint8 *hctab;
-extern uint8 vc_ntsc_224[262];
-extern uint8 vc_pal_224[313];
-extern uint8 vc_pal_240[313];
-extern uint8 cycle2hc32[488];
-extern uint8 cycle2hc40[488];
-
 /* Function prototypes */
 extern void vdp_init(void);
 extern void vdp_reset(void);
@@ -88,6 +75,5 @@ extern unsigned int vdp_hvc_r(void);
 extern void vdp_reg_w(unsigned int r, unsigned int d);
 extern void dma_update();
 extern void vdp_test_w(unsigned int value);
-
 
 #endif /* _VDP_H_ */

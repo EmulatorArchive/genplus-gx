@@ -3,16 +3,16 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 3.32
+ *                                Version 3.31
  *
  * A portable Motorola M680x0 processor emulation engine.
- * Copyright Karl Stenerud.  All rights reserved.
+ * Copyright 1998-2007 Karl Stenerud.  All rights reserved.
  *
  * This code may be freely used for non-commercial purposes as long as this
  * copyright notice remains unaltered in the source code and any binary files
  * containing this code in compiled form.
  *
- * All other licensing terms must be negotiated with the author
+ * All other lisencing terms must be negotiated with the author
  * (Karl Stenerud).
  *
  * The latest version of this code can be obtained at:
@@ -157,7 +157,7 @@
  * access a word or longword at an odd address.
  * NOTE: This is only emulated properly for 68000 mode.
  */
-#define M68K_EMULATE_ADDRESS_ERROR  OPT_ON
+#define M68K_EMULATE_ADDRESS_ERROR  OPT_OFF
 
 
 /* Turn ON to enable logging of illegal instruction calls.
