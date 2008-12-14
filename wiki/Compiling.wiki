@@ -1,0 +1,37 @@
+#labels Featured
+== Disclaimer ==
+
+This project is under the GPL licence, this means that the sourcecode should *always* be made available to anyone asking for it and should be included with any modified binaries.
+
+You might want to compile the sourcecode yourself from current [http://code.google.com/p/genplus-gx/source/checkout SVN] for various reasons:
+
+ * to test the current build before it is officially released
+ * to implement your own features.
+
+However, I would be grateful if you take the following points in *consideration*:
+
+ * tagged versions are "official" releases: they have been tested to ensure the code is stable enough and mostly bug-free.
+
+ * current SVN build should always be considered as unstable and work in progress: you are free to compile the current source code but don't complain about bugs and don't make public binary release from this.
+
+ * you can modify the sourcecode as you want but in order to keep this project clean and structured, I would ask you to keep ANY private build for yourself and to avoid public distribution of derivative works. If you think the modification you made should be implemented in an official release, please contact me and I would eventually add them and obviously give all the credits to you.
+
+
+== Instructions ==
+
+You will need to be familiar with development environment setup. If you don't, you might look at [http://www.wiibrew.org wiibrew] or [http://www.tehskeen.com/forums/showthread.php?t=2968 tehskeen's forum].
+
+First, you will have to download and install the following tools/libraries:
+
+ # the last version of Devkitpro and [https://sourceforge.net/project/showfiles.php?group_id=114505&package_id=124208 DevkitPPC]. Windows user should directly run the [https://sourceforge.net/project/showfiles.php?group_id=114505&package_id=160396 AutoInstaller] version
+ # the precompiled libogc directory from the [http://code.google.com/p/genplus-gx/downloads/list download page]. This should be installed in C:/devkitpro/libogc. 
+
+Once you are done, grab the current [http://code.google.com/p/genplus-gx/source/checkout genplus-gx] source code from SVN then launch compile_all.bat from *msys* (installed with devkitpro)
+
+The precompiled libogc directory contains all libraries and include files required to compile the current source code of Genesis Plus GX. However, you could also get current sourcecode of the libraries, compile them yourself and install as specified (generally *make* then *make install*).
+
+The following libraries are required:
+
+ * [https://sourceforge.net/project/showfiles.php?group_id=114505&package_id=126925 libogc], from his [http://devkitpro.cvs.sourceforge.net/devkitpro/libogc/ CVS repository] 
+ * [https://sourceforge.net/project/showfiles.php?group_id=114505&package_id=197264 libfat], from his [http://devkitpro.cvs.sourceforge.net/devkitpro/libfat/ CVS repository]
+ 

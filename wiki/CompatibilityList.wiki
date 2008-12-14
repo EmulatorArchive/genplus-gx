@@ -1,0 +1,23 @@
+#labels Featured
+Genesis Plus's compatibility should be quite high, let's say 99.9% of known roms are working without any graphical glitches or lockup. The only unsupported ones are a few unlicensed/pirates games which require some custom cartridge hardware currently unemulated. 
+
+
+I personnaly tested many games to be sure they all work like on original hardware, however, it is impossible for me to test all games *from start to end* so feel free to add comments if you found a specific game not running properly with this emulator.
+
+
+On a side note, make sure you are always using good dumps, ROM files labelled as bad dump (b1, b2,...) are generally known to cause problem (even on real hardware).
+
+
+== Not Working ==
+
+ * Mulan (Unl): hangs after title screen
+ * Pocket Monsters II (Unl): hangs on title screen
+ * Top Fighter 2000 MK VIII (Unl): no display
+ * Top Shooter (Unl): no input
+ * Chinese Fighter III (Unl): hangs on character selection screen
+ * Sonic Jam 6 (Unl): don't boot
+
+
+== Working ==
+
+all other games :-)

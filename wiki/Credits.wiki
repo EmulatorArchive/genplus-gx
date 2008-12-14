@@ -1,0 +1,45 @@
+#summary this project would not have been possible without these people
+#labels Featured
+
+== Genesis Plus core ==
+
+ * original emulation code by [http://cgfm2.emuviews.com/ Charles Mac Donald]
+ * additional code (core, extra features, compatibility fixes,…) by [http://gxdev.wordpress.com/ Eke-Eke]
+ * Z80, 68000 and YM2612 cores by the [http://mamedev.org/ M.A.M.E] team
+ * alternate YM2612 core by [http://gens.consolemul.com/ Stef]
+ * SN76489 core by [http://www.smspower.org/maxim/ Maxim]
+ * SVP core by [http://notaz.gp2x.de/svp.php Notaz]
+ * [http://www.mega-nerd.com/SRC/ libsamplerate ] by Erik de Castro Lopo
+ * [http://www.fly.net/~ant/libs/ntsc.html NTSC Video Filter ] library by Shay Green
+ * [http://zlib.net/ zlib] by Jean-Loup Gailly and Mark Adler_
+
+
+==== additional thanks to ====
+ * Nemesis, for having tested and documented many unknown YM2612 features
+ * Tasco Deluxe for his work around the SVP chip and for his documentation of Realtec mapper
+ * [http://www.trzy.org/ Bart Trzynadlowski] for his documentation about SSFII mapper and 68000 undocumented behaviour
+ * [http://haze.mameworld.info/ Haze] for having found and documented many unlicensed cartridges protections
+ * Notaz & Stef for their help, the source code of their respective emulator, Picodrive and Gens, was also a great source of inspiration
+ * [http://aamirm.hacking-cult.org/ AamirM], author of Regen, for some good advices
+ * Charles Mc Donald for his excellent documentation about the Sega Genesis hardware and for having designed such a great emulator
+ * [http://www.spritesmind.net/_GenDev/forum/ Spritesmind] & [http://www.smspower.org/ SMS Power] forums members for their technical help_
+
+
+== Gamecube/Wii port ==
+
+ * original Gamecube's port by softdev, honkeykong & markcube
+ * additional features and Wii port by Eke-Eke
+ * graphical interface and icon design by [http://www.tehskeen.net brakken]
+ * [http://chishm.drunkencoders.com/libfat/ libFAT] by Chism , ported to libogc by Sven Peter (svpe) & wintermute
+ * [http://www.wiiuse.net/ wiiuse] library by Michael Laforest (para), ported to libogc by shagkur
+ * [http://hackmii.com/2008/08/libdi-and-the-dvdx-installer/ libDI] by Erant
+ * [http://www.devkitpro.org/category/libogc/ libOGC] by winterMute, shagkur and all contributors
+ * [http://www.devkitpro.org/ devkitpro] & [http://www.devkitpro.org/category/devkitppc/ devkitPPC] by winterMute_
+
+
+
+==== additional thanks to ====
+ * softdev for all his great work and inspiration
+ * [http://debugmo.de/ tmbinc] for having made Gamecube homebrew a reality
+ * [http://hackmii.com/ Twiizer team] for all the work they are doing for [http://www.wiibrew.org Wii homebrew]
+ * Brakken & [http://www.tehskeen.com Tehskeen's] forum members for their feedback and support_
