@@ -38,6 +38,8 @@
 #ifndef _CD_PCM_
 #define _CD_PCM_
 
+#include "blip_buf.h"
+
 /* PCM channel */
 typedef struct
 {
@@ -63,10 +65,11 @@ typedef struct
 } pcm_t;
 
 /* Function prototypes */
-extern void pcm_init(double clock, double samplerate);
-extern void pcm_shutdown(void);
+extern void pcm_init(blip_t* left, blip_t* right);
 extern void pcm_reset(void);
-extern void pcm_update(short *buffer, int length);
+extern int pcm_context_save(uint8 *state);
+extern int pcm_context_load(uint8 *state);
+extern void pcm_update(unsigned int samples);
 extern void pcm_write(unsigned int address, unsigned char data);
 extern unsigned char pcm_read(unsigned int address);
 extern void pcm_ram_dma_w(unsigned int words);
