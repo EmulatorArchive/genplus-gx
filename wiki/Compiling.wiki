@@ -1,0 +1,46 @@
+#summary Build your own binary
+#labels Featured
+
+== Disclaimer ==
+
+This project is under a specific open-source license, which implies that the sourcecode must *always* be made available with any modified binaries and should *not* be used in any commercial activity.
+
+You might want to compile the sourcecode yourself from current [http://code.google.com/p/genplus-gx/source/checkout SVN] for various reasons:
+
+ * to test the current build before it is officially released
+ * to implement your own features.
+
+However, I would appreciate if you *respect* the following points:
+
+ * current SVN build should always be considered as unstable and work in progress: you are free to compile the current source code but don't complain about bugs and *don't make any public binary distribution from this*. You can always get the last stable code from the tagged versions.
+
+
+ * you can modify the sourcecode as you want but in order to keep this project clean and structured, I would ask you to *keep ANY private build for yourself and to avoid public distribution of derivative works*. If you think the modification you made should be implemented in an official release, please contact me: I would eventually include them and obviously give all the credits to you.
+
+
+== How to Compile ? ==
+
+First, you will have to download and install the following tools/libraries:
+
+ # from [http://sourceforge.net/projects/devkitpro/files/devkitPPC here], the last version of DevkitPPC. Windows user should directly run the Automated Installer. During installation, make sure you get libogc and libfat libraries installed as well. They should be installed in C:/devkitpro/libogc/
+ # from [http://sourceforge.net/projects/devkitpro/files/portlibs here], the following libraries: zlib, libpng & libtremor. Make sure you pick the precompiled PPC versions and extract them in C:/devkitpro/portlibs/ppc/. You should have the following directories once extracted:
+
+ * /devkitpro/portlibs/ppc/include
+
+ * /devkitpro/portlibs/ppc/include/tremor
+
+ * /devkitpro/portlibs/ppc/lib
+
+Once you are done, if you haven't one yet, install a [http://en.wikipedia.org/wiki/Comparison_of_Subversion_clients SVN client] and get the current [http://code.google.com/p/genplus-gx/source/checkout genplus-gx] source code from SVN.
+
+Finally, go into genplus-gx/trunk/ and run compile_all.bat.
+
+The DevkitPro download page provides all the precompiled libraries and include files required to compile the current source code of Genesis Plus GX. However, you could also get the current source code of the libraries, compile them yourself and install as specified (generally *make* then *make install*).
+
+The following libraries are required:
+
+ * [http://sourceforge.net/projects/devkitpro/files/libogc/ libogc]
+ * [http://sourceforge.net/projects/devkitpro/files/libfat/ libfat]
+ * libtremor: OGG music file support
+ * libpng: PNG image file support
+ * zlib: ZIP compressed file support
