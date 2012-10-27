@@ -1,6 +1,7 @@
 NTSC = 0
 DEBUG = 0
 LOGSOUND = 0
+FRONTEND_SUPPORTS_RGB565 = 1
 
 GENPLUS_SRC_DIR := source
 LIBRETRO_DIR	:= libretro
@@ -61,11 +62,16 @@ else ifeq ($(platform), xenon)
    CC = xenon-gcc$(EXE_EXT)
    AR = xenon-ar$(EXE_EXT)
    PLATFORM_DEFINES := -D__LIBXENON__ -DALT_RENDER
+else ifeq ($(platform), ngc)
+   TARGET := libretro_ngc.a
+   CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
+   AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
+   PLATFORM_DEFINES := -DGEKKO -DHW_DOL -mrvl -mcpu=750 -meabi -mhard-float -DALT_RENDER
 else ifeq ($(platform), wii)
    TARGET := libretro_wii.a
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-   PLATFORM_DEFINES := -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -DALT_RENDER
+   PLATFORM_DEFINES := -DGEKKO -DHW_RVL -mrvl -mcpu=750 -meabi -mhard-float -DALT_RENDER
 else
    TARGET := retro.dll
    CC = gcc
@@ -123,7 +129,7 @@ LIBRETRO_SRC := $(GENPLUS_SRC_DIR)/genesis.c \
 			$(GENPLUS_SRC_DIR)/cart_hw/svp/svp.c \
 			$(GENPLUS_SRC_DIR)/ntsc/md_ntsc.c \
 			$(GENPLUS_SRC_DIR)/ntsc/sms_ntsc.c \
-=			$(GENPLUS_SRC_DIR)/sound/eq.c \
+			$(GENPLUS_SRC_DIR)/sound/eq.c \
 			$(GENPLUS_SRC_DIR)/sound/sound.c \
 			$(GENPLUS_SRC_DIR)/sound/ym2612.c \
 			$(GENPLUS_SRC_DIR)/sound/ym2413.c \
@@ -149,6 +155,13 @@ endif
 DEFINES := 
 CFLAGS += $(fpic) $(DEFINES) $(CODE_DEFINES)
 
+ifeq ($(FRONTEND_SUPPORTS_RGB565), 1)
+# if you have a new frontend that supports RGB565
+BPP_DEFINES = -DUSE_16BPP_RENDERING -DFRONTEND_SUPPORTS_RGB565
+else
+BPP_DEFINES = -DUSE_15BPP_RENDERING
+endif
+
 LIBRETRO_CFLAGS += -I$(GENPLUS_SRC_DIR) \
 		-I$(GENPLUS_SRC_DIR)/sound \
 		-I$(GENPLUS_SRC_DIR)/input_hw \
@@ -159,7 +172,7 @@ LIBRETRO_CFLAGS += -I$(GENPLUS_SRC_DIR) \
 		-I$(GENPLUS_SRC_DIR)/z80 \
 		-I$(GENPLUS_SRC_DIR)/ntsc \
 		-I$(LIBRETRO_DIR) \
-		-DUSE_15BPP_RENDERING \
+		$(BPP_DEFINES) \
 		$(ENDIANNESS_DEFINES) \
 		$(PLATFORM_DEFINES) \
 		-DINLINE="static inline" \
@@ -182,15 +195,20 @@ else ifeq ($(platform), psl1ght)
 	$(AR) rcs $@ $(LIBRETRO_OBJ)
 else ifeq ($(platform), xenon)
 	$(AR) rcs $@ $(LIBRETRO_OBJ)
+else ifeq ($(platform), ngc)
+	$(AR) rcs $@ $(LIBRETRO_OBJ)
 else ifeq ($(platform), wii)
 	$(AR) rcs $@ $(LIBRETRO_OBJ)
 else
 	$(CC) -o $(TARGET) $(fpic) $(LIBRETRO_OBJ) $(LIBRETRO_LIBS) $(SHARED) 
 endif
 
+clean-objs:
+	rm -f $(LIBRETRO_OBJ)
+
 clean:
 	rm -f $(LIBRETRO_OBJ)
 	rm -f $(TARGET)
 
-.PHONY: clean
+.PHONY: clean clean-objs
 
