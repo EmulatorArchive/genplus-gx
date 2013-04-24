@@ -79,6 +79,7 @@ static void default_time_w(uint32 address, uint32 data);
 static void default_regs_w(uint32 address, uint32 data);
 static uint32 default_regs_r(uint32 address);
 static uint32 default_regs_r_16(uint32 address);
+static uint32 custom_regs_r(uint32 address);
 static void custom_regs_w(uint32 address, uint32 data);
 static void custom_alt_regs_w(uint32 address, uint32 data);
 static uint32 topshooter_r(uint32 address);
@@ -151,7 +152,6 @@ static const md_entry_t rom_database[CART_CNT] =
 /* (*) Chao Ji Da Fu Weng (patched ROM, various words witten to register, long word also read from $7E0000, unknown banking hardware ?) */
   {0xa697,0xa697,0x40,0x40,{{0x00,0x00,0x00,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0x400000,0x000000,0x000000,0x000000},0,0,NULL,NULL,NULL,default_regs_w}},
 
-
 /* (*) Aq Renkan Awa (patched ROM, ON/OFF bit sequence is written to register, unknown banking hardware ?) */
   {0x8104,0x0517,0x40,0x40,{{0x00,0x00,0x00,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0x400001,0x000000,0x000000,0x000000},0,0,NULL,NULL,NULL,default_regs_w}},
 
@@ -202,8 +202,10 @@ static const md_entry_t rom_database[CART_CNT] =
   {0x0000,0xd0a0,0x48,0x4f,{{0x00,0x00,0xaa,0xf0},{0xffffff,0xffffff,0xfc0000,0xfc0000},{0x000000,0x000000,0x480000,0x4c0000},0,0,NULL,NULL,default_regs_r,NULL}},
 
 
-/* Rockman X3 (half-patched ROM, two last register values are not used, 0xaa/0x18 works too) */
-  {0x0000,0x9d0e,0x40,0x40,{{0x0c,0x00,0xc9,0xf0},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0x000000,0x000000,0x000000},0,0,default_regs_r,NULL,NULL,NULL}},
+/* Rockman X3 (bootleg version ? two last register returned values are ignored, note that 0xaa/0x18 would work as well) */
+  {0x0000,0x9d0e,0x40,0x40,{{0x0c,0x00,0xc9,0xf0},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0x000000,0x400004,0x400006},0,0,default_regs_r,NULL,default_regs_r,NULL}},
+
+
 /* (*) Dragon Ball Final Bout  (patched ROM, in original code, different switches occurs depending on returned value $00-$0f) */
   {0xc65a,0xc65a,0x00,0x00,{{0x00,0x00,0x00,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0x000000,0x000000,0x000000},0,0,default_regs_r,NULL,NULL,NULL}},
 /* (*) Yang Jia Jiang - Yang Warrior Family (patched ROM, register value unused) */
@@ -212,17 +214,21 @@ static const md_entry_t rom_database[CART_CNT] =
   {0xffff,0x0474,0x00,0x00,{{0x0a,0x00,0x00,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0x000000,0x000000,0x000000},0,0,default_regs_r,NULL,NULL,NULL}},
 /* Super Mario World */
   {0x2020,0xb4eb,0x00,0x00,{{0x1c,0x00,0x00,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0x000000,0x000000,0x000000},0,0,default_regs_r,NULL,NULL,NULL}},
-/* A Bug's Life */
-  {0x7f7f,0x2aad,0x00,0x00,{{0x28,0x1f,0x01,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0xa13002,0xa1303e,0x000000},0,0,default_regs_r,NULL,NULL,NULL}},
+
+
 /* King of Fighter 99 */
-  {0x0000,0x021e,0x00,0x00,{{0x00,0x01,0x1f,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0xa13002,0xa1303e,0x000000},0,0,default_regs_r,NULL,NULL,NULL}},
+  {0x0000,0x021e,0x00,0x00,{{0x00,0x01,0x1f,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0xa13002,0xa1303e,0x000000},0,0,custom_regs_r,default_regs_w,NULL,NULL}},
 /* Pocket Monster */
-  {0xd6fc,0x1eb1,0x00,0x00,{{0x00,0x01,0x1f,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0xa13002,0xa1303e,0x000000},0,0,default_regs_r,NULL,NULL,NULL}},
-/* Pocket Monster (alt version, two last register values are read but return values are not tested ?) */
-  {0xd6fc,0x6319,0x00,0x00,{{0x14,0x00,0x00,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0xa13002,0xa1303e,0x000000},0,0,default_regs_r,NULL,NULL,NULL}},
+  {0xd6fc,0x1eb1,0x00,0x00,{{0x00,0x01,0x1f,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0xa13002,0xa1303e,0x000000},0,0,custom_regs_r,default_regs_w,NULL,NULL}},
+/* Pocket Monster (bootleg version ? two last register returned values are ignored & first register test has been modified) */
+  {0xd6fc,0x6319,0x00,0x00,{{0x14,0x01,0x1f,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0xa13002,0xa1303e,0x000000},0,0,default_regs_r,m68k_unused_8_w,NULL,NULL}},
+/* A Bug's Life (bootleg version ? two last register returned values are ignored & first register test has been modified ?) */
+  {0x7f7f,0x2aad,0x00,0x00,{{0x28,0x01,0x1f,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0xa13000,0xa13002,0xa1303e,0x000000},0,0,default_regs_r,m68k_unused_8_w,NULL,NULL}},
+
 
 /* Game no Kanzume Otokuyou */
   {0x0000,0xf9d1,0x00,0x00,{{0x00,0x00,0x00,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0x000000,0x000000,0x000000,0x000000},0,0,NULL,mapper_seganet_w,NULL,NULL}},
+
 
 /* Top Shooter (arcade hardware) */
   {0xffff,0x3632,0x20,0x20,{{0x00,0x00,0x00,0x00},{0xffffff,0xffffff,0xffffff,0xffffff},{0x000000,0x000000,0x000000,0x000000},0,0,NULL,NULL,topshooter_r,topshooter_w}}
@@ -1634,59 +1640,19 @@ static void default_regs_w(uint32 address, uint32 data)
   m68k_unused_8_w(address, data);
 }
 
-/* "Tekken 3 Special" custom hardware */
-static void tekken_regs_w(uint32 address, uint32 data)
+/* basic register shifting hardware (Bug's Life, Pocket Monster) */
+static uint32 custom_regs_r(uint32 address)
 {
-  switch (address & 0x0e)
+  int i;
+  for (i=0; i<4; i++)
   {
-    case 0x00:
+    if ((address & cart.hw.mask[i]) == cart.hw.addr[i])
     {
-      /* data output reset ? (game writes $FF before & after protection check) */
-      cart.hw.regs[0]= 0x00;
-      break;
-    }
-  
-    case 0x02:
-    {
-      /* read only ? */
-      break;
-    }
-  
-    case 0x0c:
-    {
-      /* data output mode bit 0 ? (game writes $01) */
-      break;
-    }
-  
-    case 0x0e:
-    {
-      /* data output mode bit 1 ? (never written by game) */
-      break;
-    }
-  
-    default:
-    {
-      /* data input (only connected to D0 ?)*/
-      if (data & 1)
-      {
-        /* 4-bit hardware register ($400004 corresponds to bit0, $400006 to bit1, etc) */
-        cart.hw.regs[0] |= 1 << (((address - 0x04) >> 1) & 3);
-      }
-      break;
+      return cart.hw.regs[i] >> 1;
     }
   }
-}
 
-static uint32 tekken_regs_r(uint32 address)
-{
-  /* data output */
-  if ((address & 0x0e) == 0x02)
-  {
-    /* maybe depends on mode bits ? */
-    return (cart.hw.regs[0] - 1);
-  }
-
-  return m68k_read_bus_16(address);
+  return m68k_read_bus_8(address);
 }
 
 /* custom register hardware (Top Fighter, Lion King III, Super Donkey Kong  99, Mulan, Pocket Monsters II, Pokemon Stadium) */
@@ -1744,7 +1710,62 @@ static void custom_alt_regs_w(uint32 address, uint32 data)
 }
 
 
-/* Top Shooter arcade board hardware */
+/* "Tekken 3 Special" custom register hardware */
+static uint32 tekken_regs_r(uint32 address)
+{
+  /* data output */
+  if ((address & 0x0e) == 0x02)
+  {
+    /* maybe depends on mode bits ? */
+    return (cart.hw.regs[0] - 1);
+  }
+
+  return m68k_read_bus_16(address);
+}
+
+static void tekken_regs_w(uint32 address, uint32 data)
+{
+  switch (address & 0x0e)
+  {
+    case 0x00:
+    {
+      /* data output reset ? (game writes $FF before & after protection check) */
+      cart.hw.regs[0]= 0x00;
+      break;
+    }
+  
+    case 0x02:
+    {
+      /* read only ? */
+      break;
+    }
+  
+    case 0x0c:
+    {
+      /* data output mode bit 0 ? (game writes $01) */
+      break;
+    }
+  
+    case 0x0e:
+    {
+      /* data output mode bit 1 ? (never written by game) */
+      break;
+    }
+  
+    default:
+    {
+      /* data input (only connected to D0 ?)*/
+      if (data & 1)
+      {
+        /* 4-bit hardware register ($400004 corresponds to bit0, $400006 to bit1, etc) */
+        cart.hw.regs[0] |= 1 << (((address - 0x04) >> 1) & 3);
+      }
+      break;
+    }
+  }
+}
+
+/* "Top Shooter" arcade board hardware */
 static uint32 topshooter_r(uint32 address)
 {
   if (address < 0x202000)
