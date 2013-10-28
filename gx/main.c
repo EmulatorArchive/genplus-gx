@@ -472,9 +472,8 @@ int main (int argc, char *argv[])
   /* enable 64-byte fetch mode for L2 cache */
   L2Enhance();
   
-  /* initialize DI interface */
+  /* disable DVD cache */
   DI_UseCache(0);
-  DI_Init();
 
   /* autodetect loader arguments */
   if ((argc >= 3) && (argv[1] != NULL))
