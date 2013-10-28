@@ -499,11 +499,6 @@ int main (int argc, char *argv[])
   /* initialize video engine */
   gx_video_Init();
 
-#ifndef HW_RVL
-  /* initialize DVD interface */
-  DVD_Init();
-#endif
-
   /* initialize input engine */
   gx_input_Init();
 
